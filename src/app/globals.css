@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+  }
+}
+
+/* Custom Leaflet Map styling */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.custom-marker-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Selected Pin Radar Pulse Effect */
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.radar-ring {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin-bottom: -16px;
+  margin-left: -16px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.4);
+  border: 2px solid #2563eb;
+  animation: radarPulse 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.radar-ring-2 {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin-bottom: -16px;
+  margin-left: -16px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.3);
+  border: 2px solid #f59e0b;
+  animation: radarPulse 1.8s ease-out infinite 0.7s;
+  pointer-events: none;
+}
+
+/* Mobile App Native Enhancements */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Hide scrollbar for clean mobile horizontal scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Touch feedback for buttons */
+.touch-press {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.touch-press:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+/* Mobile Bottom Sheet slide up animation */
+@keyframes slideUpMobile {
+  from {
+    transform: translateY(100%);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+
+
