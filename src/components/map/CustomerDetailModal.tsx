@@ -287,12 +287,12 @@ export default function CustomerDetailModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[92vh] animate-slide-up sm:animate-in sm:fade-in sm:zoom-in-95 duration-200 border-t sm:border border-slate-200">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="relative w-full max-w-2xl bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
           
           {/* Mobile Drag Handle */}
-          <div className="sm:hidden pt-2.5 pb-0 flex justify-center bg-slate-50/80">
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
+          <div className="sm:hidden pt-3 pb-1 flex justify-center bg-slate-50/90">
+            <div className="w-10 h-1 bg-slate-300 rounded-full" />
           </div>
 
           {/* Header */}
@@ -898,15 +898,15 @@ export default function CustomerDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-            <div className="flex items-center space-x-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>อัปเดตล่าสุด: {customer.updated_at ? new Date(customer.updated_at).toLocaleString('th-TH') : '-'}</span>
+          <div className="p-3.5 sm:p-4 pb-[max(0.85rem,env(safe-area-inset-bottom,12px))] border-t border-slate-100 bg-slate-50/95 backdrop-blur-md flex items-center justify-between text-xs text-slate-500 shrink-0">
+            <div className="flex items-center space-x-1 truncate max-w-[200px] sm:max-w-none text-[11px] sm:text-xs">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">อัปเดต: {customer.updated_at ? new Date(customer.updated_at).toLocaleString('th-TH') : '-'}</span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              className="h-10 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all active:scale-95 touch-press shrink-0"
             >
               ปิด
             </button>

@@ -204,12 +204,12 @@ export default function ActivityFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[92vh] animate-slide-up sm:animate-in sm:fade-in sm:zoom-in-95 duration-200 border-t sm:border border-slate-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
         
         {/* Mobile Drag Handle */}
-        <div className="sm:hidden pt-2.5 pb-1 flex justify-center bg-slate-50/80">
-          <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
+        <div className="sm:hidden pt-3 pb-1 flex justify-center bg-slate-50/90">
+          <div className="w-10 h-1 bg-slate-300 rounded-full" />
         </div>
 
         {/* Header */}
@@ -395,19 +395,19 @@ export default function ActivityFormModal({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end space-x-2 pt-3 sm:pt-4 pb-[max(0.85rem,env(safe-area-inset-bottom,12px))] border-t border-slate-100 bg-white/95 backdrop-blur-md sticky bottom-0 -mx-6 -mb-6 px-6 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              className="h-11 px-4 sm:px-5 font-bold text-slate-700 hover:bg-slate-100 bg-slate-50 border border-slate-200 rounded-xl transition-all active:scale-95"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center space-x-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-50"
+              className="h-11 flex items-center space-x-1.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-50"
             >
               {loading ? (
                 <>
