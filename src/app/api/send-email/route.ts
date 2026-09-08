@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         const today = new Date().toISOString().split('T')[0];
         await supabase.from('customer_activities').insert({
           customer_id: customerId,
-          activity_type: 'ส่งใบเสนอราคา',
+          activity_type: 'ส่งอีเมล',
           activity_date: today,
           contact_person: contactPerson || null,
           details: `ส่งอีเมล E-Catalog CHICAI ELECTRIC (ลดต้นทุน 70% + On-site Demo) ถึง ${email.trim()}`,

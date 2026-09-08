@@ -50,6 +50,7 @@ export interface CustomerActivity {
 }
 
 export const ACTIVITY_TYPES = [
+  { type: 'ส่งอีเมล', icon: 'Mail', color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
   { type: 'โทรศัพท์', icon: 'Phone', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { type: 'เข้าพบโรงงาน', icon: 'Car', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
   { type: 'สาธิตเครื่อง (Demo)', icon: 'Sparkles', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },

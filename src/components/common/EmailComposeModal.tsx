@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Customer } from "@/types/customer";
+import { Customer, CustomerActivity } from "@/types/customer";
+import { supabase } from "@/lib/supabase";
 import {
   X,
   Mail,
@@ -11,7 +12,10 @@ import {
   CheckCircle2,
   Rocket,
   Building2,
-  Check
+  Check,
+  AlertTriangle,
+  History,
+  RotateCcw
 } from "lucide-react";
 
 interface EmailComposeModalProps {
@@ -33,6 +37,10 @@ export default function EmailComposeModal({
   const [toEmail, setToEmail] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
   const [body, setBody] = useState<string>("");
+
+  // Duplicate Check / History State
+  const [previousEmailLog, setPreviousEmailLog] = useState<CustomerActivity | null>(null);
+  const [checkingHistory, setCheckingHistory] = useState<boolean>(false);
 
   // Direct Send State via Google Apps Script Webhook
   const [gasWebhookUrl, setGasWebhookUrl] = useState<string>("");
@@ -59,6 +67,31 @@ export default function EmailComposeModal({
       localStorage.setItem("CHICAI_GAS_WEBHOOK_URL", tempWebhookUrl.trim());
       setGasWebhookUrl(tempWebhookUrl.trim());
       setShowWebhookSettings(false);
+    }
+  };
+
+  // Check if email was previously sent to this customer
+  const checkPreviousEmailHistory = async (customerId: number) => {
+    setCheckingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("customer_activities")
+        .select("*")
+        .eq("customer_id", customerId)
+        .or("activity_type.eq.ส่งอีเมล,details.ilike.%ส่งอีเมล%")
+        .order("activity_date", { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        setPreviousEmailLog(data[0]);
+      } else {
+        setPreviousEmailLog(null);
+      }
+    } catch (err) {
+      console.error("Error checking email history:", err);
+      setPreviousEmailLog(null);
+    } finally {
+      setCheckingHistory(false);
     }
   };
 
@@ -89,6 +122,7 @@ CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่อง�
 CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       setDirectSendSuccess(false);
       setDirectSendError(null);
+      checkPreviousEmailHistory(customer.id);
     }
   }, [isOpen, customer]);
 
@@ -106,6 +140,14 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
     if (!cleanToEmail) {
       alert("กรุณาระบุอีเมลผู้รับก่อนส่ง");
       return;
+    }
+
+    // If previously sent, ask for confirmation to prevent accidental double send
+    if (previousEmailLog) {
+      const confirmSendAgain = window.confirm(
+        `⚠️ แจ้งเตือน: บริษัทนี้เคยส่งอีเมลไปแล้วเมื่อวันที่ ${new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH")}\n\nคุณต้องการยืนยันส่งอีเมลซ้ำอีกครั้งใช่หรือไม่?`
+      );
+      if (!confirmSendAgain) return;
     }
 
     setIsSendingDirect(true);
@@ -131,6 +173,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       }
 
       setDirectSendSuccess(true);
+      checkPreviousEmailHistory(customer.id);
       if (onEmailSent) {
         onEmailSent();
       }
@@ -229,6 +272,24 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
         {/* Modal Body */}
         <div className="p-3.5 sm:p-4 overflow-y-auto space-y-3 flex-1 text-slate-800 text-xs sm:text-sm">
           
+          {/* Duplicate Send Alert Banner (If previously sent) */}
+          {previousEmailLog && !directSendSuccess && (
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl flex items-start space-x-2.5 animate-in fade-in duration-200 shadow-xs">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-950 leading-relaxed">
+                <span className="font-extrabold text-xs sm:text-sm text-amber-900 block">
+                  ⚠️ บริษัทนี้เคยส่งอีเมลไปแล้ว
+                </span>
+                ส่งล่าสุดเมื่อวันที่ <b>{new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}</b>
+                {previousEmailLog.details && (
+                  <span className="text-[11px] text-amber-800 block mt-0.5 truncate">
+                    ({previousEmailLog.details.slice(0, 50)}...)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Direct Send Success Notification Banner */}
           {directSendSuccess && (
             <div className="p-3.5 bg-gradient-to-br from-emerald-50 via-teal-50/50 to-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-xs">
@@ -341,13 +402,22 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             type="button"
             disabled={isSendingDirect}
             onClick={handleDirectSendEmail}
-            className="h-11 flex-1 flex items-center justify-center space-x-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-md shadow-teal-700/20 transition-all active:scale-[0.98] touch-press disabled:opacity-60 cursor-pointer"
+            className={`h-11 flex-1 flex items-center justify-center space-x-2 px-4 rounded-xl text-white text-xs sm:text-sm font-black shadow-md transition-all active:scale-[0.98] touch-press disabled:opacity-60 cursor-pointer ${
+              previousEmailLog
+                ? "bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-800 shadow-amber-700/20"
+                : "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 shadow-teal-700/20"
+            }`}
             title="ยิงอีเมล E-Catalog พร้อมรูปภาพอัตโนมัติ 1-Click ผ่าน Google Apps Script"
           >
             {isSendingDirect ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>กำลังส่งอีเมล...</span>
+              </>
+            ) : previousEmailLog ? (
+              <>
+                <RotateCcw className="w-4 h-4" />
+                <span>⚠️ ส่งซ้ำอีกครั้ง (Re-send)</span>
               </>
             ) : (
               <>
