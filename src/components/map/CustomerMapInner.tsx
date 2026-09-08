@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import CustomerDetailModal from './CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
+import EmailComposeModal from '@/components/common/EmailComposeModal';
 import { generateDistrictZones, DistrictZone } from '@/lib/geo';
 import { getDbdSearchUrl, getGoogleDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
 import Supercluster from 'supercluster';
@@ -222,6 +223,8 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
   const [showDrawer, setShowDrawer] = useState(true);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -1107,20 +1110,22 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                 </div>
               )}
 
-              {selectedCustomer.email ? (
-                <a
-                  href={`mailto:${selectedCustomer.email.trim()}`}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[10px] font-bold touch-press"
-                >
-                  <Mail className="w-3.5 h-3.5 mb-0.5 text-indigo-600" />
-                  <span>ส่งเมล</span>
-                </a>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
-                  <Mail className="w-3.5 h-3.5 mb-0.5" />
-                  <span>ไม่มีเมล</span>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailCustomer(selectedCustomer);
+                  setIsEmailModalOpen(true);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
+                  selectedCustomer.email
+                    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200'
+                }`}
+                title="ส่งอีเมลหรือ Gmail พร้อมแม่แบบข้อความ"
+              >
+                <Mail className={`w-3.5 h-3.5 mb-0.5 ${selectedCustomer.email ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span>{selectedCustomer.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+              </button>
 
               {selectedCustomer.google_maps_url ? (
                 <a
@@ -1300,13 +1305,17 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                         {cust.email && (
                           <div className="flex items-center justify-between">
                             <span className="text-slate-500 font-medium truncate max-w-[180px]">✉️ {cust.email}</span>
-                            <a
-                              href={`mailto:${cust.email.trim()}`}
-                              onClick={(e) => e.stopPropagation()}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEmailCustomer(cust);
+                                setIsEmailModalOpen(true);
+                              }}
                               className="text-blue-600 font-semibold hover:underline shrink-0"
                             >
-                              ส่งอีเมล
-                            </a>
+                              ส่งอีเมล / Gmail
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1335,6 +1344,13 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
         customer={null}
         onClose={() => setIsCreateModalOpen(false)}
         onSaved={handleCustomerSaved}
+      />
+
+      {/* Email Compose & Templates Modal */}
+      <EmailComposeModal
+        isOpen={isEmailModalOpen}
+        customer={emailCustomer}
+        onClose={() => setIsEmailModalOpen(false)}
       />
 
     </div>

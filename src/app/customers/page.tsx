@@ -5,6 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import CustomerDetailModal from '@/components/map/CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
+import EmailComposeModal from '@/components/common/EmailComposeModal';
 import { supabase, fetchAllCustomers } from '@/lib/supabase';
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import { getDbdSearchUrl } from '@/lib/utils';
@@ -45,6 +46,10 @@ export default function CustomersPage() {
   // Quick Delete State
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState(false);
+
+  // Email State
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -324,20 +329,22 @@ export default function CustomersPage() {
                         </div>
                       )}
 
-                      {c.email ? (
-                        <a
-                          href={`mailto:${c.email.trim()}`}
-                          className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] font-bold touch-press"
-                        >
-                          <Mail className="w-3.5 h-3.5 mb-0.5 text-indigo-600" />
-                          <span>ส่งเมล</span>
-                        </a>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
-                          <Mail className="w-3.5 h-3.5 mb-0.5" />
-                          <span>ไม่มีเมล</span>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailCustomer(c);
+                          setIsEmailModalOpen(true);
+                        }}
+                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
+                          c.email
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
+                            : 'bg-slate-50 text-slate-500 border border-slate-200'
+                        }`}
+                        title="ส่งอีเมล / Gmail พร้อมแม่แบบข้อความ"
+                      >
+                        <Mail className={`w-3.5 h-3.5 mb-0.5 ${c.email ? 'text-indigo-600' : 'text-slate-400'}`} />
+                        <span>{c.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+                      </button>
 
                       {c.google_maps_url ? (
                         <a
@@ -443,14 +450,18 @@ export default function CustomersPage() {
                           </td>
                           <td className="py-3.5 px-4 max-w-[220px] truncate">
                             {c.email ? (
-                              <a
-                                href={`mailto:${c.email.trim()}`}
-                                className="font-medium text-blue-600 hover:underline flex items-center space-x-1 truncate"
-                                title={c.email}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEmailCustomer(c);
+                                  setIsEmailModalOpen(true);
+                                }}
+                                className="font-medium text-blue-600 hover:underline flex items-center space-x-1 truncate text-left"
+                                title="ส่งอีเมล / Gmail พร้อมแม่แบบ"
                               >
                                 <Mail className="w-3 h-3 shrink-0 text-blue-500" />
                                 <span className="truncate">{c.email}</span>
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-slate-400">-</span>
                             )}
@@ -563,6 +574,13 @@ export default function CustomersPage() {
         isDeleting={deletingCustomer}
         onConfirm={confirmQuickDelete}
         onClose={() => setCustomerToDelete(null)}
+      />
+
+      {/* Email Compose & Templates Modal */}
+      <EmailComposeModal
+        isOpen={isEmailModalOpen}
+        customer={emailCustomer}
+        onClose={() => setIsEmailModalOpen(false)}
       />
     </div>
   );

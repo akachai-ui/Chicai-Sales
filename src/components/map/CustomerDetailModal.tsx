@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getDbdSearchUrl, getGoogleDbdSearchUrl } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
+import EmailComposeModal from '@/components/common/EmailComposeModal';
 import {
   X,
   Phone,
@@ -67,6 +68,9 @@ export default function CustomerDetailModal({
 
   // Full Edit Modal State
   const [showFullEditModal, setShowFullEditModal] = useState(false);
+
+  // Email Modal State
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Delete Customer State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -334,7 +338,7 @@ export default function CustomerDetailModal({
             </div>
 
             {/* Quick Action Buttons */}
-            <div className={`grid ${customer.website ? (customer.email ? 'grid-cols-4' : 'grid-cols-3') : (customer.email ? 'grid-cols-3' : 'grid-cols-2')} gap-1.5 sm:gap-2 mt-4`}>
+            <div className={`grid ${customer.website ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 sm:gap-2 mt-4`}>
               {customer.phone ? (
                 <a
                   href={`tel:${customer.phone.replace(/\s+/g, '')}`}
@@ -350,15 +354,19 @@ export default function CustomerDetailModal({
                 </button>
               )}
 
-              {customer.email && (
-                <a
-                  href={`mailto:${customer.email.trim()}`}
-                  className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm shadow-indigo-600/20 transition-all active:scale-[0.98]"
-                >
-                  <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">อีเมล</span>
-                </a>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowEmailModal(true)}
+                className={`flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl font-semibold text-xs transition-all active:scale-[0.98] ${
+                  customer.email
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+                title="ส่งอีเมล / Gmail พร้อมแม่แบบข้อความ"
+              >
+                <Mail className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{customer.email ? 'ส่งเมล / Gmail' : 'เขียนเมล'}</span>
+              </button>
 
               {customer.website && (
                 <a
@@ -936,6 +944,13 @@ export default function CustomerDetailModal({
         isDeleting={deletingActivity}
         onConfirm={handleDeleteActivity}
         onClose={() => setActivityToDelete(null)}
+      />
+
+      {/* Email Compose & Templates Modal */}
+      <EmailComposeModal
+        isOpen={showEmailModal}
+        customer={customer}
+        onClose={() => setShowEmailModal(false)}
       />
     </>
   );
