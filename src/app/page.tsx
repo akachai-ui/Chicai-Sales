@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { supabase, fetchAllCustomers } from '@/lib/supabase';
+import { supabase, fetchAllCustomers, subscribeToRealtimeChanges } from '@/lib/supabase';
 import { Customer, PIPELINE_STAGES } from '@/types/customer';
 import {
   MapPin,
@@ -16,7 +16,8 @@ import {
   Building,
   Target,
   Compass,
-  Layers
+  Layers,
+  Radio
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,18 +25,28 @@ export default function HomePage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchAllCustomers();
-        if (data) setCustomers(data as Customer[]);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async () => {
+    try {
+      const data = await fetchAllCustomers();
+      if (data) setCustomers(data as Customer[]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    load();
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToRealtimeChanges(['customers', 'customer_activities'], () => {
+      loadData();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
 

@@ -86,3 +86,43 @@ export async function fetchAllCustomers(): Promise<Customer[]> {
   return all;
 }
 
+/**
+ * Realtime subscription for Supabase tables
+ */
+export function subscribeToRealtimeChanges(
+  tables: ('customers' | 'customer_activities')[],
+  callback: (payload: { table: string; eventType: string; new: any; old: any }) => void
+) {
+  const channelName = `realtime-changes-${Math.random().toString(36).substring(2, 9)}`;
+  let channel = supabase.channel(channelName);
+
+  tables.forEach((table) => {
+    channel = channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table,
+      },
+      (payload) => {
+        callback({
+          table,
+          eventType: payload.eventType,
+          new: payload.new,
+          old: payload.old,
+        });
+      }
+    );
+  });
+
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      console.log(`[Supabase Realtime] Subscribed to ${tables.join(', ')}`);
+    }
+  });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+

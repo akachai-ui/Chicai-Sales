@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
+import { fetchAllCustomers, subscribeToRealtimeChanges } from '@/lib/supabase';
 import CustomerDetailModal from './CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
@@ -234,6 +235,29 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
   const zonesLayerRef = useRef<any>(null);
   const superclusterRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+
+  // Realtime subscription for Map
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeChanges(['customers', 'customer_activities'], async () => {
+      try {
+        const fresh = await fetchAllCustomers();
+        if (fresh && fresh.length > 0) {
+          setCustomers(fresh);
+          setSelectedCustomer((curr) => {
+            if (!curr) return null;
+            const updated = fresh.find((c) => c.id === curr.id);
+            return updated || curr;
+          });
+        }
+      } catch (err) {
+        console.error('Error syncing realtime customers on map:', err);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Summary counts of contacted vs uncontacted
   const statsSummary = useMemo(() => {

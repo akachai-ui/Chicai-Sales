@@ -40,6 +40,10 @@ export default function Navbar() {
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                     CRM & Field Map
                   </span>
+                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Realtime Sync</span>
+                  </span>
                 </div>
               </div>
             </Link>
@@ -72,11 +76,17 @@ export default function Navbar() {
       {!isMapPage && (
         <div className="sm:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 safe-top shadow-xs">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2.5">
+            <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-blue-500/30">
                 <MapPin className="w-4 h-4" />
               </div>
-              <span className="font-extrabold text-base text-slate-900 tracking-tight">Chicai Sales</span>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-extrabold text-sm text-slate-900 tracking-tight">Chicai Sales</span>
+                <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Live</span>
+                </span>
+              </div>
             </Link>
             <div className="flex items-center space-x-1.5">
               <Link

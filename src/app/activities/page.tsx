@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import ActivityFormModal from '@/components/activities/ActivityFormModal';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
-import { supabase } from '@/lib/supabase';
+import { supabase, subscribeToRealtimeChanges } from '@/lib/supabase';
 import { CustomerActivity, Customer } from '@/types/customer';
 import {
   History,
@@ -47,8 +47,8 @@ export default function ActivitiesPage() {
   const [deleting, setDeleting] = useState(false);
 
 
-  const loadActivities = async () => {
-    setLoading(true);
+  const loadActivities = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('customer_activities')
@@ -65,12 +65,20 @@ export default function ActivitiesPage() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadActivities();
+    loadActivities(true);
+
+    const unsubscribe = subscribeToRealtimeChanges(['customer_activities', 'customers'], () => {
+      loadActivities(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const filtered = useMemo(() => {

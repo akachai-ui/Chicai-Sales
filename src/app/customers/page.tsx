@@ -6,7 +6,7 @@ import CustomerDetailModal from '@/components/map/CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
-import { supabase, fetchAllCustomers } from '@/lib/supabase';
+import { supabase, fetchAllCustomers, subscribeToRealtimeChanges } from '@/lib/supabase';
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import { getDbdSearchUrl } from '@/lib/utils';
 import {
@@ -51,20 +51,28 @@ export default function CustomersPage() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
+  const fetchCustomers = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const data = await fetchAllCustomers();
       setCustomers(data || []);
     } catch (err: any) {
       console.error('Error:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomers();
+    fetchCustomers(true);
+
+    const unsubscribe = subscribeToRealtimeChanges(['customers', 'customer_activities'], () => {
+      fetchCustomers(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const districts = useMemo(() => {
