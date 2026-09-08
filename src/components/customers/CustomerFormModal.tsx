@@ -157,27 +157,57 @@ export default function CustomerFormModal({
         updated_at: new Date().toISOString(),
       };
 
+      let savedData: Customer | null = null;
+      let saveError: any = null;
+
       if (isEdit && customer?.id) {
-        // UPDATE
-        const { data, error } = await supabase
+        const res = await supabase
           .from('customers')
           .update(payload)
           .eq('id', customer.id)
           .select()
           .single();
-
-        if (error) throw error;
-        onSaved(data as Customer, 'edit');
+        savedData = res.data as Customer;
+        saveError = res.error;
       } else {
-        // CREATE
-        const { data, error } = await supabase
+        const res = await supabase
           .from('customers')
           .insert([payload])
           .select()
           .single();
+        savedData = res.data as Customer;
+        saveError = res.error;
+      }
 
-        if (error) throw error;
-        onSaved(data as Customer, 'create');
+      // Fallback if tax_id / registered_name columns do not exist in DB yet
+      if (saveError && (saveError.message.includes('registered_name') || saveError.message.includes('tax_id') || saveError.code === 'PGRST204')) {
+        const fallbackPayload = { ...payload };
+        delete (fallbackPayload as any).tax_id;
+        delete (fallbackPayload as any).registered_name;
+
+        if (isEdit && customer?.id) {
+          const retry = await supabase
+            .from('customers')
+            .update(fallbackPayload)
+            .eq('id', customer.id)
+            .select()
+            .single();
+          savedData = retry.data as Customer;
+          saveError = retry.error;
+        } else {
+          const retry = await supabase
+            .from('customers')
+            .insert([fallbackPayload])
+            .select()
+            .single();
+          savedData = retry.data as Customer;
+          saveError = retry.error;
+        }
+      }
+
+      if (saveError) throw saveError;
+      if (savedData) {
+        onSaved(savedData, isEdit ? 'edit' : 'create');
       }
 
       onClose();

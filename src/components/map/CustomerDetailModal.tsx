@@ -128,7 +128,7 @@ export default function CustomerDetailModal({
   const handleSaveCustomer = async () => {
     setSavingCustomer(true);
     try {
-      const updates = {
+      const updates: any = {
         pipeline_stage: pipelineStage,
         contact_person: contactPerson,
         target_product: targetProduct,
@@ -138,12 +138,30 @@ export default function CustomerDetailModal({
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('customers')
         .update(updates)
         .eq('id', customer.id)
         .select()
         .single();
+
+      // Fallback if tax_id / registered_name columns do not exist in DB yet
+      if (error && (error.message.includes('registered_name') || error.message.includes('tax_id') || error.code === 'PGRST204')) {
+        delete updates.tax_id;
+        delete updates.registered_name;
+        const retry = await supabase
+          .from('customers')
+          .update(updates)
+          .eq('id', customer.id)
+          .select()
+          .single();
+
+        if (!retry.error && retry.data) {
+          data = retry.data;
+          error = null;
+          alert('บันทึกข้อมูลหลักสำเร็จ!\n\nหมายเหตุ: หากต้องการบันทึกเลขนิติบุคคล 13 หลัก และชื่อจดทะเบียน DBD ลงฐานข้อมูล กรุณารันคำสั่ง SQL ใน Supabase SQL Editor:\n\nALTER TABLE customers ADD COLUMN IF NOT EXISTS tax_id TEXT;\nALTER TABLE customers ADD COLUMN IF NOT EXISTS registered_name TEXT;');
+        }
+      }
 
       if (error) {
         alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
