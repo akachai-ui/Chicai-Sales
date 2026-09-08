@@ -1014,106 +1014,80 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
         {/* Floating Selected Customer Action Card on Mobile (Bottom Card) */}
         {selectedCustomer && !showDrawer && (
-          <div className="sm:hidden fixed bottom-16 left-2 right-2 z-30 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2">
+          <div className="sm:hidden fixed bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-1.5">
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
                     #{selectedCustomer.seq || selectedCustomer.id}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
                     {selectedCustomer.district || 'สมุทรปราการ'}
                   </span>
+                  {(selectedCustomer.activities_count !== undefined && selectedCustomer.activities_count > 0) || (selectedCustomer.pipeline_stage && selectedCustomer.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      ✓ {selectedCustomer.pipeline_stage || 'ติดต่อแล้ว'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                      ⚪ ยังไม่ได้ติดต่อ
+                    </span>
+                  )}
                 </div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-snug line-clamp-1">
+                <h4 className="font-extrabold text-sm text-slate-900 leading-snug truncate pt-0.5">
                   {selectedCustomer.name}
                 </h4>
               </div>
               <button
                 onClick={() => setSelectedCustomer(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Contact Status Summary Banner */}
-            {(selectedCustomer.activities_count !== undefined && selectedCustomer.activities_count > 0) || (selectedCustomer.pipeline_stage && selectedCustomer.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
-              <div className="space-y-0.5 bg-emerald-50/90 border border-emerald-200 rounded-xl p-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center space-x-1 font-bold text-emerald-800 text-[11px]">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>ติดต่อแล้ว {selectedCustomer.activities_count || 1} ครั้ง</span>
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    {selectedCustomer.pipeline_stage || 'ติดต่อแล้ว'}
-                  </span>
-                </div>
-                {selectedCustomer.latest_activity?.details && (
-                  <p className="text-[10px] text-emerald-900 line-clamp-1 italic">
-                    💬 ล่าสุด ({selectedCustomer.latest_activity.activity_type}): {selectedCustomer.latest_activity.details}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1 text-xs text-slate-500">
-                <span>⚪ ยังไม่เคยติดต่อ</span>
-                <span className="text-[10px] text-slate-400">กดปุ่มโทรหรือบันทึก</span>
-              </div>
-            )}
+            {/* Quick Links Row (Phone / DBD / Website) in clean compact chips */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {selectedCustomer.phone && (
+                <a
+                  href={`tel:${selectedCustomer.phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold touch-press"
+                >
+                  <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span className="truncate">{selectedCustomer.phone}</span>
+                </a>
+              )}
 
-            {/* Direct Info Pills (Phone / Email) if available */}
-            {(selectedCustomer.phone || selectedCustomer.email) && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                {selectedCustomer.phone && (
-                  <a
-                    href={`tel:${selectedCustomer.phone.replace(/\s+/g, '')}`}
-                    className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 font-semibold truncate"
-                  >
-                    <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
-                    <span className="truncate">{selectedCustomer.phone}</span>
-                  </a>
-                )}
-                {selectedCustomer.email && (
-                  <a
-                    href={`mailto:${selectedCustomer.email.trim()}`}
-                    className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-800 font-semibold truncate max-w-[200px]"
-                  >
-                    <Mail className="w-3 h-3 text-indigo-600 shrink-0" />
-                    <span className="truncate">{selectedCustomer.email}</span>
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* DBD Quick Link */}
-            <a
-              href={getDbdSearchUrl(selectedCustomer)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
-            >
-              <span className="flex items-center space-x-1.5">
-                <span>🏛️</span>
-                <span>ดูข้อมูลนิติบุคคล DBD DataWarehouse</span>
-              </span>
-              <ExternalLink className="w-3 h-3 text-slate-400" />
-            </a>
-
-            {/* Website Link if available */}
-            {selectedCustomer.website && (
               <a
-                href={selectedCustomer.website.startsWith('http') ? selectedCustomer.website : `https://${selectedCustomer.website}`}
+                href={getDbdSearchUrl(selectedCustomer)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-sky-50/80 hover:bg-sky-100/80 border border-sky-200/80 text-[11px] font-bold text-sky-700 transition-colors touch-press"
+                className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-semibold touch-press"
               >
-                <span className="flex items-center space-x-1.5 truncate">
+                <span>🏛️</span>
+                <span>DBD DataWarehouse</span>
+                <ExternalLink className="w-3 h-3 text-slate-400 shrink-0 ml-0.5" />
+              </a>
+
+              {selectedCustomer.website && (
+                <a
+                  href={selectedCustomer.website.startsWith('http') ? selectedCustomer.website : `https://${selectedCustomer.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 font-semibold touch-press truncate max-w-[170px]"
+                >
                   <span>🌐</span>
                   <span className="truncate">{selectedCustomer.website.replace(/^https?:\/\//, '')}</span>
-                </span>
-                <ExternalLink className="w-3 h-3 text-sky-500 shrink-0 ml-1" />
-              </a>
+                  <ExternalLink className="w-3 h-3 text-sky-500 shrink-0 ml-0.5" />
+                </a>
+              )}
+            </div>
+
+            {/* Latest Activity Note if exists */}
+            {selectedCustomer.latest_activity?.details && (
+              <div className="text-[10px] text-emerald-900 bg-emerald-50/80 border border-emerald-100 rounded-lg px-2 py-1 truncate">
+                💬 <b>ล่าสุด ({selectedCustomer.latest_activity.activity_type}):</b> {selectedCustomer.latest_activity.details}
+              </div>
             )}
 
             {/* Quick Action Buttons Grid on Mobile Card */}
@@ -1121,7 +1095,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               {selectedCustomer.phone ? (
                 <a
                   href={`tel:${selectedCustomer.phone.replace(/\s+/g, '')}`}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 text-white font-bold text-[10px] shadow-sm touch-press active:scale-95"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm touch-press active:scale-95"
                 >
                   <Phone className="w-3.5 h-3.5 mb-0.5" />
                   <span>โทรออก</span>
@@ -1136,7 +1110,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               {selectedCustomer.email ? (
                 <a
                   href={`mailto:${selectedCustomer.email.trim()}`}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] font-bold touch-press"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[10px] font-bold touch-press"
                 >
                   <Mail className="w-3.5 h-3.5 mb-0.5 text-indigo-600" />
                   <span>ส่งเมล</span>
@@ -1153,7 +1127,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   href={selectedCustomer.google_maps_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
                 >
                   <ExternalLink className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
                   <span>นำทาง</span>
@@ -1209,7 +1183,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
       {/* Customer List Drawer: Desktop Side Drawer & Mobile Bottom Sheet */}
       {showDrawer && (
-        <div className="fixed sm:relative bottom-14 sm:bottom-0 left-0 sm:left-auto right-0 sm:right-auto max-h-[65vh] sm:max-h-full sm:h-full w-full sm:w-80 md:w-96 bg-white sm:border-l border-t sm:border-t-0 border-slate-200 shadow-2xl rounded-t-3xl sm:rounded-none flex flex-col z-40 sm:z-30 animate-slide-up sm:animate-in sm:slide-in-from-right duration-200">
+        <div className="fixed sm:relative bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-0 left-0 sm:left-auto right-0 sm:right-auto max-h-[65vh] sm:max-h-full sm:h-full w-full sm:w-80 md:w-96 bg-white sm:border-l border-t sm:border-t-0 border-slate-200 shadow-2xl rounded-t-3xl sm:rounded-none flex flex-col z-40 sm:z-30 animate-slide-up sm:animate-in sm:slide-in-from-right duration-200">
           
           {/* Mobile Drag Handle */}
           <div className="sm:hidden pt-2.5 pb-1 flex justify-center">
