@@ -331,29 +331,41 @@ export default function CustomerDetailModal({
             </div>
 
             {/* Quick Action Buttons */}
-            <div className={`grid ${customer.email ? 'grid-cols-3' : 'grid-cols-2'} gap-2 mt-4`}>
+            <div className={`grid ${customer.website ? (customer.email ? 'grid-cols-4' : 'grid-cols-3') : (customer.email ? 'grid-cols-3' : 'grid-cols-2')} gap-1.5 sm:gap-2 mt-4`}>
               {customer.phone ? (
                 <a
                   href={`tel:${customer.phone.replace(/\s+/g, '')}`}
-                  className="flex items-center justify-center space-x-1.5 py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm shadow-emerald-600/20 transition-all active:scale-[0.98]"
+                  className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm shadow-emerald-600/20 transition-all active:scale-[0.98]"
                 >
                   <Phone className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">โทรออก</span>
                 </a>
               ) : (
-                <button disabled className="flex items-center justify-center space-x-1.5 py-2 px-2.5 rounded-xl bg-slate-100 text-slate-400 font-semibold text-xs cursor-not-allowed">
+                <button disabled className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-slate-100 text-slate-400 font-semibold text-xs cursor-not-allowed">
                   <Phone className="w-3.5 h-3.5 shrink-0" />
-                  <span>ไม่มีเบอร์โทร</span>
+                  <span>ไม่มีเบอร์</span>
                 </button>
               )}
 
               {customer.email && (
                 <a
                   href={`mailto:${customer.email.trim()}`}
-                  className="flex items-center justify-center space-x-1.5 py-2 px-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm shadow-indigo-600/20 transition-all active:scale-[0.98]"
+                  className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm shadow-indigo-600/20 transition-all active:scale-[0.98]"
                 >
                   <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">ส่งอีเมล</span>
+                  <span className="truncate">อีเมล</span>
+                </a>
+              )}
+
+              {customer.website && (
+                <a
+                  href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-sm shadow-sky-600/20 transition-all active:scale-[0.98]"
+                >
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">เว็บไซต์</span>
                 </a>
               )}
 
@@ -361,7 +373,7 @@ export default function CustomerDetailModal({
                 href={mapNavigationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center space-x-1.5 py-2 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm shadow-blue-600/20 transition-all active:scale-[0.98]"
+                className="flex items-center justify-center space-x-1.5 py-2 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm shadow-blue-600/20 transition-all active:scale-[0.98]"
               >
                 <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Google Maps</span>

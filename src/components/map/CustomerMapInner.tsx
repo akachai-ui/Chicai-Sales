@@ -460,8 +460,13 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                 </div>
               ` : ''}
               ${cust.email ? `
-                <div style="font-size: 11px; color: #2563eb; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
+                <div style="font-size: 11px; color: #2563eb; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
                   ✉️ <a href="mailto:${cust.email}" style="color: #2563eb; text-decoration: underline;">${cust.email}</a>
+                </div>
+              ` : ''}
+              ${cust.website ? `
+                <div style="font-size: 11px; color: #0284c7; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
+                  🌐 <a href="${cust.website.startsWith('http') ? cust.website : 'https://' + cust.website}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline;">${cust.website.replace(/^https?:\/\//, '')}</a>
                 </div>
               ` : ''}
               <div style="margin-top: 6px;">
@@ -555,8 +560,13 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
             </div>
           ` : ''}
           ${selectedCustomer.email ? `
-            <div style="font-size: 11px; color: #2563eb; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
+            <div style="font-size: 11px; color: #2563eb; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
               ✉️ <a href="mailto:${selectedCustomer.email}" style="color: #2563eb; text-decoration: underline;">${selectedCustomer.email}</a>
+            </div>
+          ` : ''}
+          ${selectedCustomer.website ? `
+            <div style="font-size: 11px; color: #0284c7; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; word-break: break-all;">
+              🌐 <a href="${selectedCustomer.website.startsWith('http') ? selectedCustomer.website : 'https://' + selectedCustomer.website}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline;">${selectedCustomer.website.replace(/^https?:\/\//, '')}</a>
             </div>
           ` : ''}
           <div style="margin-top: 6px;">
@@ -1063,6 +1073,22 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               </span>
               <ExternalLink className="w-3 h-3 text-slate-400" />
             </a>
+
+            {/* Website Link if available */}
+            {selectedCustomer.website && (
+              <a
+                href={selectedCustomer.website.startsWith('http') ? selectedCustomer.website : `https://${selectedCustomer.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-sky-50/80 hover:bg-sky-100/80 border border-sky-200/80 text-[11px] font-bold text-sky-700 transition-colors touch-press"
+              >
+                <span className="flex items-center space-x-1.5 truncate">
+                  <span>🌐</span>
+                  <span className="truncate">{selectedCustomer.website.replace(/^https?:\/\//, '')}</span>
+                </span>
+                <ExternalLink className="w-3 h-3 text-sky-500 shrink-0 ml-1" />
+              </a>
+            )}
 
             {/* Quick Action Buttons Grid on Mobile Card */}
             <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
