@@ -107,5 +107,12 @@
   animation: slideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* On mobile/smartphone (< 768px), hide Leaflet popups so only the sleek native bottom action card is shown */
+@media (max-width: 767px) {
+  .leaflet-popup {
+    display: none !important;
+  }
+}
+
 
 
