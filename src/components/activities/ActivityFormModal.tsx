@@ -175,6 +175,11 @@ export default function ActivityFormModal({
         }
         if (updatePipelineStage) {
           customerUpdates.pipeline_stage = updatePipelineStage;
+        } else {
+          const targetCust = customers.find((c) => c.id === selectedCustomerId);
+          if (targetCust && (targetCust.pipeline_stage === 'ยังไม่ได้ติดต่อ' || !targetCust.pipeline_stage)) {
+            customerUpdates.pipeline_stage = 'ติดต่อแล้ว / ติดตามงาน';
+          }
         }
 
         await supabase

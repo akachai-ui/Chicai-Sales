@@ -213,13 +213,29 @@ export default function CustomerDetailModal({
         setNewNextDate('');
         setShowAddForm(false);
 
+        const newStage =
+          customer.pipeline_stage === 'ยังไม่ได้ติดต่อ' || !customer.pipeline_stage
+            ? 'ติดต่อแล้ว / ติดตามงาน'
+            : customer.pipeline_stage;
+
         await supabase
           .from('customers')
           .update({
             contact_person: newContactPerson || customer.contact_person,
+            pipeline_stage: newStage,
             updated_at: new Date().toISOString()
           })
           .eq('id', customer.id);
+
+        if (onCustomerUpdated) {
+          onCustomerUpdated({
+            ...customer,
+            contact_person: newContactPerson || customer.contact_person,
+            pipeline_stage: newStage,
+            activities_count: (customer.activities_count || 0) + 1,
+            latest_activity: data as CustomerActivity,
+          });
+        }
       }
     } catch (err: any) {
       alert('เกิดข้อผิดพลาด: ' + err.message);

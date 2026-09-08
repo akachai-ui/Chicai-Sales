@@ -279,17 +279,32 @@ export default function CustomersPage() {
                           </p>
                         )}
                       </div>
-                      <span className={`shrink-0 inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${stageConf.dot}`} />
-                        <span>{c.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span>
-                      </span>
+                      <div className="flex flex-col items-end space-y-1 shrink-0">
+                        <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${stageConf.dot}`} />
+                          <span>{c.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span>
+                        </span>
+                        {(c.activities_count !== undefined && c.activities_count > 0) && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            ✓ {c.activities_count} กิจกรรม
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    {c.target_product && (
+                    {/* Activity Note Snippet or Target Product */}
+                    {c.latest_activity?.details ? (
+                      <div className="text-[11px] text-emerald-800 bg-emerald-50/80 p-2 rounded-xl border border-emerald-100 flex items-start space-x-1.5">
+                        <span className="shrink-0">💬</span>
+                        <span className="line-clamp-2 leading-relaxed">
+                          <b>{c.latest_activity.activity_type} ({c.latest_activity.activity_date?.split('T')[0]}):</b> {c.latest_activity.details}
+                        </span>
+                      </div>
+                    ) : c.target_product ? (
                       <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 line-clamp-1">
                         📦 <span className="font-medium">{c.target_product}</span>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Mobile Quick Action Buttons Toolbar */}
                     <div className="grid grid-cols-4 gap-1.5 pt-1">

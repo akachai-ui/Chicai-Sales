@@ -38,16 +38,26 @@ interface CustomerMapInnerProps {
 // Function to generate sleek minimal SVG Pin icon for single factory
 function createSinglePin(customer: Customer, isSelected: boolean = false) {
   const stage = customer.pipeline_stage || '';
-  let pinColor = '#64748b'; // slate
-  if (stage.includes('ติดต่อแล้ว')) pinColor = '#d97706'; // amber
-  else if (stage.includes('นัดหมาย')) pinColor = '#2563eb'; // blue
-  else if (stage.includes('เสนอราคา')) pinColor = '#7c3aed'; // purple
-  else if (stage.includes('สำเร็จ') || stage.includes('ปิดการขาย (สำเร็จ)')) pinColor = '#059669'; // emerald
-  else if (stage.includes('ไม่สนใจ') || stage.includes('ไม่ได้')) pinColor = '#e11d48'; // rose
+  const hasContact =
+    (customer.activities_count !== undefined && customer.activities_count > 0) ||
+    (stage && stage !== 'ยังไม่ได้ติดต่อ');
+
+  let pinColor = '#94a3b8'; // default uncontacted: subtle slate-400
+  let isContacted = false;
+
+  if (hasContact) {
+    isContacted = true;
+    if (stage.includes('ติดต่อแล้ว') || stage.includes('ติดตามงาน')) pinColor = '#f59e0b'; // vibrant amber
+    else if (stage.includes('นัดหมาย') || stage.includes('Demo')) pinColor = '#2563eb'; // blue
+    else if (stage.includes('เสนอราคา')) pinColor = '#7c3aed'; // purple
+    else if (stage.includes('สำเร็จ') || stage.includes('ปิดการขาย (สำเร็จ)')) pinColor = '#059669'; // emerald
+    else if (stage.includes('ไม่สนใจ') || stage.includes('ไม่ได้')) pinColor = '#e11d48'; // rose
+    else pinColor = '#f59e0b'; // default contacted
+  }
 
   if (isSelected) {
     return `
-      <div style="position: relative; width: 44px; height: 54px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; z-index: 99999;">
+      <div style="position: relative; width: 48px; height: 58px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; z-index: 99999;">
         <!-- Radar Pulse Waves anchored at bottom center -->
         <div class="radar-ring"></div>
         <div class="radar-ring-2"></div>
@@ -55,7 +65,7 @@ function createSinglePin(customer: Customer, isSelected: boolean = false) {
         <!-- Floating Name Tag Badge -->
         <div style="
           position: absolute;
-          bottom: 58px;
+          bottom: 62px;
           left: 50%;
           transform: translateX(-50%);
           background: #0f172a;
@@ -66,32 +76,70 @@ function createSinglePin(customer: Customer, isSelected: boolean = false) {
           font-weight: 700;
           white-space: nowrap;
           box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-          border: 1.5px solid #fbbf24;
+          border: 1.5px solid ${isContacted ? '#10b981' : '#fbbf24'};
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 5px;
           pointer-events: none;
         ">
-          <span>⭐</span>
+          <span>${isContacted ? '✅' : '🏢'}</span>
           <span>${customer.name}</span>
+          ${customer.activities_count ? `<span style="background: #10b981; color: white; border-radius: 9999px; padding: 1px 5px; font-size: 9px; font-weight: 800;">${customer.activities_count} ครั้ง</span>` : ''}
         </div>
 
-        <!-- Large Selected Pin with Golden Ring -->
+        <!-- Large Selected Pin with Golden/Green Ring -->
         <svg width="44" height="54" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));">
-          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="#fbbf24"/>
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${isContacted ? '#10b981' : '#fbbf24'}"/>
           <path d="M16 2C8.268 2 2 8.268 2 16c0 10.5 14 21 14 21s14-10.5 14-21c0-7.732-6.268-14-14-14z" fill="${pinColor}"/>
           <circle cx="16" cy="15" r="7" fill="#ffffff"/>
-          <circle cx="16" cy="15" r="4" fill="#fbbf24"/>
+          <circle cx="16" cy="15" r="4" fill="${isContacted ? '#10b981' : '#fbbf24'}"/>
         </svg>
       </div>
     `;
   }
 
+  if (isContacted) {
+    // Contacted Pin: Vivid Color + Checkmark / Activity Badge on top right
+    const countBadge = customer.activities_count && customer.activities_count > 1 ? customer.activities_count : '✓';
+    return `
+      <div style="position: relative; width: 30px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="28" height="34" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.15s ease;">
+          <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="${pinColor}"/>
+          <path d="M13 1.5C6.65 1.5 1.5 6.65 1.5 13c0 8.5 11.5 17 11.5 17s11.5-8.5 11.5-17c0-6.35-5.15-11.5-11.5-11.5z" stroke="#ffffff" stroke-width="1.2"/>
+          <circle cx="13" cy="12" r="5" fill="#ffffff"/>
+          <circle cx="13" cy="12" r="3" fill="${pinColor}"/>
+        </svg>
+        <!-- Contacted Checkmark Badge -->
+        <div style="
+          position: absolute;
+          top: -3px;
+          right: -3px;
+          min-width: 15px;
+          height: 15px;
+          padding: 0 2px;
+          border-radius: 9999px;
+          background: #10b981;
+          color: #ffffff;
+          font-size: 9px;
+          font-weight: 900;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid #ffffff;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        ">
+          ${countBadge}
+        </div>
+      </div>
+    `;
+  }
+
+  // Uncontacted: Clean Subtle Slate Pin
   return `
-    <div style="position: relative; width: 26px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-      <svg width="26" height="32" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35)); transition: transform 0.15s ease;">
-        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="${pinColor}"/>
-        <circle cx="13" cy="12" r="5" fill="#ffffff"/>
+    <div style="position: relative; width: 24px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.85;">
+      <svg width="22" height="28" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 1.5px 3px rgba(0,0,0,0.25)); transition: transform 0.15s ease;">
+        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="#94a3b8"/>
+        <circle cx="13" cy="12" r="4.5" fill="#ffffff"/>
       </svg>
     </div>
   `;
@@ -168,6 +216,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
+  const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED'>('ALL');
   const [showZones, setShowZones] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -181,6 +230,20 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
   const zonesLayerRef = useRef<any>(null);
   const superclusterRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+
+  // Summary counts of contacted vs uncontacted
+  const statsSummary = useMemo(() => {
+    let contacted = 0;
+    let uncontacted = 0;
+    customers.forEach((c) => {
+      const hasContact =
+        (c.activities_count !== undefined && c.activities_count > 0) ||
+        (c.pipeline_stage && c.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
+      if (hasContact) contacted++;
+      else uncontacted++;
+    });
+    return { contacted, uncontacted, total: customers.length };
+  }, [customers]);
 
   // Generate District Zones automatically from customer points
   const districtZones = useMemo(() => {
@@ -204,6 +267,15 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
       if (!c.latitude || !c.longitude) return false;
       if (selectedDistrict !== 'ALL' && c.district !== selectedDistrict) return false;
       if (selectedStage !== 'ALL' && c.pipeline_stage !== selectedStage) return false;
+
+      // Contact Status Filter
+      const hasContact =
+        (c.activities_count !== undefined && c.activities_count > 0) ||
+        (c.pipeline_stage && c.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
+
+      if (contactFilter === 'CONTACTED' && !hasContact) return false;
+      if (contactFilter === 'UNCONTACTED' && hasContact) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = c.name.toLowerCase().includes(q);
@@ -214,7 +286,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
       }
       return true;
     });
-  }, [customers, selectedDistrict, selectedStage, searchQuery]);
+  }, [customers, selectedDistrict, selectedStage, contactFilter, searchQuery]);
 
   // Build Supercluster index whenever filteredCustomers change
   useEffect(() => {
@@ -358,19 +430,29 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
           const marker = L.marker([lat, lng], { icon: customIcon });
 
-          const stageConf = getStageConfig(cust.pipeline_stage);
+          const isCustContacted =
+            (cust.activities_count !== undefined && cust.activities_count > 0) ||
+            (cust.pipeline_stage && cust.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
           const popupContent = `
-            <div style="font-family: inherit; min-width: 220px; max-width: 280px; padding: 2px;">
+            <div style="font-family: inherit; min-width: 230px; max-width: 290px; padding: 2px;">
               <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 2px;">
                 #${cust.seq || cust.id} • ${cust.district || 'สมุทรปราการ'}
               </div>
               <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
                 ${cust.name}
               </div>
-              <div style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; margin-bottom: 8px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
-                ${cust.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
+              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; background-color: ${isCustContacted ? '#ecfdf5' : '#f1f5f9'}; color: ${isCustContacted ? '#065f46' : '#334155'}; border: 1px solid ${isCustContacted ? '#a7f3d0' : '#cbd5e1'};">
+                  ${isCustContacted ? '✓ ' : ''}${cust.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
+                </span>
+                ${cust.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${cust.activities_count} กิจกรรม</span>` : ''}
               </div>
+              ${cust.latest_activity?.details ? `
+                <div style="font-size: 11px; color: #065f46; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 6px; margin-bottom: 6px; line-height: 1.3;">
+                  💬 <b>ล่าสุด (${cust.latest_activity.activity_type}):</b> ${cust.latest_activity.details.slice(0, 60)}...
+                </div>
+              ` : ''}
               ${cust.phone ? `
                 <div style="font-size: 12px; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
                   📞 <b>${cust.phone}</b>
@@ -437,17 +519,29 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
         zIndexOffset: 100000,
       });
 
+      const isSelectedContacted =
+        (selectedCustomer.activities_count !== undefined && selectedCustomer.activities_count > 0) ||
+        (selectedCustomer.pipeline_stage && selectedCustomer.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
+
       const popupContent = `
-        <div style="font-family: inherit; min-width: 220px; max-width: 280px; padding: 2px;">
+        <div style="font-family: inherit; min-width: 230px; max-width: 290px; padding: 2px;">
           <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 2px;">
             #${selectedCustomer.seq || selectedCustomer.id} • ${selectedCustomer.district || 'สมุทรปราการ'}
           </div>
           <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
             ${selectedCustomer.name}
           </div>
-          <div style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; margin-bottom: 8px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
-            ${selectedCustomer.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; background-color: ${isSelectedContacted ? '#ecfdf5' : '#f1f5f9'}; color: ${isSelectedContacted ? '#065f46' : '#334155'}; border: 1px solid ${isSelectedContacted ? '#a7f3d0' : '#cbd5e1'};">
+              ${isSelectedContacted ? '✓ ' : ''}${selectedCustomer.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
+            </span>
+            ${selectedCustomer.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${selectedCustomer.activities_count} กิจกรรม</span>` : ''}
           </div>
+          ${selectedCustomer.latest_activity?.details ? `
+            <div style="font-size: 11px; color: #065f46; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 6px; margin-bottom: 6px; line-height: 1.3;">
+              💬 <b>ล่าสุด (${selectedCustomer.latest_activity.activity_type}):</b> ${selectedCustomer.latest_activity.details.slice(0, 60)}...
+            </div>
+          ` : ''}
           ${selectedCustomer.phone ? `
             <div style="font-size: 12px; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
               📞 <b>${selectedCustomer.phone}</b>
@@ -717,7 +811,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
         <div className="absolute top-2.5 sm:top-4 left-2.5 sm:left-4 right-2.5 sm:right-4 z-20 flex flex-col gap-1.5 pointer-events-none">
           
           {/* Top Search & Filter Bar */}
-          <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 pointer-events-auto">
             {/* Search Box */}
             <div className="flex-1 bg-white/95 backdrop-blur-md shadow-md rounded-2xl border border-slate-200/80 p-1.5 flex items-center space-x-2">
               <Search className="w-4 h-4 text-slate-400 ml-2 shrink-0" />
@@ -733,6 +827,46 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
+            </div>
+
+            {/* Quick Contact Status Filter Pills (Mobile & Desktop) */}
+            <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-md shadow-md rounded-2xl border border-slate-200/80 p-1 shrink-0 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setContactFilter('ALL')}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                ทั้งหมด ({statsSummary.total})
+              </button>
+              <button
+                onClick={() => setContactFilter('CONTACTED')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'CONTACTED'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
+                }`}
+              >
+                <span>✓ ติดต่อแล้ว</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/30 font-extrabold">
+                  {statsSummary.contacted}
+                </span>
+              </button>
+              <button
+                onClick={() => setContactFilter('UNCONTACTED')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'UNCONTACTED'
+                    ? 'bg-slate-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <span>ยังไม่ได้ติดต่อ</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200/60 font-semibold">
+                  {statsSummary.uncontacted}
+                </span>
+              </button>
             </div>
 
             {/* Desktop-only dropdowns */}
@@ -804,7 +938,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
         </div>
 
         {/* Floating Vertical FAB Column on Right Side */}
-        <div className="absolute top-28 sm:top-20 right-2.5 sm:right-4 z-20 flex flex-col space-y-2 pointer-events-auto">
+        <div className="absolute top-36 sm:top-20 right-2.5 sm:right-4 z-20 flex flex-col space-y-2 pointer-events-auto">
           {/* Locate Me (GPS) */}
           <button
             onClick={handleLocateMe}
@@ -877,6 +1011,31 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Contact Status Summary Banner */}
+            {(selectedCustomer.activities_count !== undefined && selectedCustomer.activities_count > 0) || (selectedCustomer.pipeline_stage && selectedCustomer.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
+              <div className="space-y-1 bg-emerald-50/90 border border-emerald-200 rounded-xl p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center space-x-1 font-bold text-emerald-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>ติดต่อแล้ว {selectedCustomer.activities_count || 1} ครั้ง</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    {selectedCustomer.pipeline_stage || 'ติดต่อแล้ว'}
+                  </span>
+                </div>
+                {selectedCustomer.latest_activity?.details && (
+                  <p className="text-[11px] text-emerald-900 line-clamp-1 italic">
+                    💬 ล่าสุด ({selectedCustomer.latest_activity.activity_type}): {selectedCustomer.latest_activity.details}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1.5 text-xs text-slate-500">
+                <span>⚪ ยังไม่เคยติดต่อ</span>
+                <span className="text-[10px] text-slate-400">กดปุ่มโทรหรือบันทึกเพื่อเริ่มงาน</span>
+              </div>
+            )}
 
             {/* Quick Action Buttons Grid on Mobile Card */}
             <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
@@ -1025,11 +1184,16 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1 min-w-0">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[10px] font-bold text-slate-400">#{cust.seq || cust.id}</span>
+                        <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono">#{cust.seq || cust.id}</span>
                           <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
                             {cust.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
                           </span>
+                          {(cust.activities_count !== undefined && cust.activities_count > 0) && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ {cust.activities_count} กิจกรรม
+                            </span>
+                          )}
                           {isSelected && (
                             <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-blue-600 text-white animate-pulse">
                               📍 กำลังเลือก
@@ -1039,10 +1203,16 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                         <h4 className={`font-bold text-xs leading-snug truncate ${isSelected ? 'text-blue-950 font-extrabold' : 'text-slate-900'}`}>
                           {cust.name}
                         </h4>
-                        <p className="text-[11px] text-slate-500 truncate flex items-center space-x-1">
-                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{cust.district || cust.address || 'สมุทรปราการ'}</span>
-                        </p>
+                        {cust.latest_activity?.details ? (
+                          <p className="text-[11px] text-emerald-800 truncate bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-100">
+                            💬 {cust.latest_activity.activity_type}: {cust.latest_activity.details}
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-500 truncate flex items-center space-x-1">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{cust.district || cust.address || 'สมุทรปราการ'}</span>
+                          </p>
+                        )}
                       </div>
 
                       <button
