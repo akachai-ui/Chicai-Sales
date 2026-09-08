@@ -1014,7 +1014,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
         {/* Floating Selected Customer Action Card on Mobile (Bottom Card) */}
         {selectedCustomer && !showDrawer && (
-          <div className="sm:hidden fixed bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2">
+          <div className="sm:hidden fixed mobile-action-card-position left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2 max-h-[70vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-0.5 min-w-0 flex-1">
                 <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
@@ -1183,7 +1183,7 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
       {/* Customer List Drawer: Desktop Side Drawer & Mobile Bottom Sheet */}
       {showDrawer && (
-        <div className="fixed sm:relative bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-0 left-0 sm:left-auto right-0 sm:right-auto max-h-[65vh] sm:max-h-full sm:h-full w-full sm:w-80 md:w-96 bg-white sm:border-l border-t sm:border-t-0 border-slate-200 shadow-2xl rounded-t-3xl sm:rounded-none flex flex-col z-40 sm:z-30 animate-slide-up sm:animate-in sm:slide-in-from-right duration-200">
+        <div className="fixed sm:relative mobile-drawer-position sm:bottom-0 left-0 sm:left-auto right-0 sm:right-auto max-h-[65vh] sm:max-h-full sm:h-full w-full sm:w-80 md:w-96 bg-white sm:border-l border-t sm:border-t-0 border-slate-200 shadow-2xl rounded-t-3xl sm:rounded-none flex flex-col z-40 sm:z-30 animate-slide-up sm:animate-in sm:slide-in-from-right duration-200">
           
           {/* Mobile Drag Handle */}
           <div className="sm:hidden pt-2.5 pb-1 flex justify-center">

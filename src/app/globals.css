@@ -114,5 +114,13 @@
   }
 }
 
+/* Mobile Safe Positioning Above Bottom Navigation (iOS Safari & Android) */
+@media (max-width: 767px) {
+  .mobile-action-card-position {
+    bottom: calc(72px + env(safe-area-inset-bottom, 20px)) !important;
+  }
 
-
+  .mobile-drawer-position {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
