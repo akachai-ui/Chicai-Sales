@@ -14,7 +14,6 @@ import {
   Building2,
   Check,
   AlertTriangle,
-  History,
   RotateCcw
 } from "lucide-react";
 
@@ -70,26 +69,57 @@ export default function EmailComposeModal({
     }
   };
 
-  // Check if email was previously sent to this customer
-  const checkPreviousEmailHistory = async (customerId: number) => {
+  // Check if email was previously sent or customer was contacted
+  const checkPreviousEmailHistory = async (cust: Customer) => {
     setCheckingHistory(true);
     try {
+      // 1. Check synchronous latest activity from customer prop
+      if (cust.latest_activity) {
+        setPreviousEmailLog(cust.latest_activity);
+      }
+
+      // 2. Fetch all activities for this customer from Supabase
       const { data, error } = await supabase
         .from("customer_activities")
         .select("*")
-        .eq("customer_id", customerId)
-        .or("activity_type.eq.ส่งอีเมล,details.ilike.%ส่งอีเมล%")
-        .order("activity_date", { ascending: false })
-        .limit(1);
+        .eq("customer_id", cust.id)
+        .order("activity_date", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        setPreviousEmailLog(data[0]);
+        // Find email-related activity or latest activity
+        const emailLog = data.find((act) => {
+          const t = (act.activity_type || "").toLowerCase();
+          const d = (act.details || "").toLowerCase();
+          return (
+            t.includes("เมล") ||
+            t.includes("email") ||
+            t.includes("ใบเสนอราคา") ||
+            d.includes("เมล") ||
+            d.includes("email") ||
+            d.includes("presenting") ||
+            d.includes("catalog")
+          );
+        });
+        setPreviousEmailLog(emailLog || data[0]);
+      } else if (cust.pipeline_stage && cust.pipeline_stage !== "ยังไม่ได้ติดต่อ") {
+        setPreviousEmailLog({
+          id: 0,
+          customer_id: cust.id,
+          activity_type: "ติดต่อแล้ว",
+          activity_date: cust.updated_at || new Date().toISOString().split("T")[0],
+          contact_person: cust.contact_person || null,
+          details: `สถานะปัจจุบัน: ${cust.pipeline_stage}`,
+          next_action_date: null,
+          next_action_note: null,
+        });
       } else {
         setPreviousEmailLog(null);
       }
     } catch (err) {
       console.error("Error checking email history:", err);
-      setPreviousEmailLog(null);
+      if (cust.latest_activity) {
+        setPreviousEmailLog(cust.latest_activity);
+      }
     } finally {
       setCheckingHistory(false);
     }
@@ -122,7 +152,7 @@ CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่อง�
 CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       setDirectSendSuccess(false);
       setDirectSendError(null);
-      checkPreviousEmailHistory(customer.id);
+      checkPreviousEmailHistory(customer);
     }
   }, [isOpen, customer]);
 
@@ -142,10 +172,10 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       return;
     }
 
-    // If previously sent, ask for confirmation to prevent accidental double send
+    // If previously sent or contacted, ask for confirmation to prevent accidental double send
     if (previousEmailLog) {
       const confirmSendAgain = window.confirm(
-        `⚠️ แจ้งเตือน: บริษัทนี้เคยส่งอีเมลไปแล้วเมื่อวันที่ ${new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH")}\n\nคุณต้องการยืนยันส่งอีเมลซ้ำอีกครั้งใช่หรือไม่?`
+        `⚠️ แจ้งเตือน: บริษัทนี้เคยมีการติดต่อ/ส่งข้อมูลไปแล้ว (${previousEmailLog.activity_type}: ${previousEmailLog.details || "ส่งอีเมล"})\n\nคุณต้องการยืนยันส่งอีเมลซ้ำอีกครั้งใช่หรือไม่?`
       );
       if (!confirmSendAgain) return;
     }
@@ -173,7 +203,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       }
 
       setDirectSendSuccess(true);
-      checkPreviousEmailHistory(customer.id);
+      checkPreviousEmailHistory(customer);
       if (onEmailSent) {
         onEmailSent();
       }
@@ -276,14 +306,16 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
           {previousEmailLog && !directSendSuccess && (
             <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl flex items-start space-x-2.5 animate-in fade-in duration-200 shadow-xs">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-950 leading-relaxed">
+              <div className="text-xs text-amber-950 leading-relaxed min-w-0 flex-1">
                 <span className="font-extrabold text-xs sm:text-sm text-amber-900 block">
-                  ⚠️ บริษัทนี้เคยส่งอีเมลไปแล้ว
+                  ⚠️ บริษัทนี้เคยส่งข้อมูล/ติดต่อแล้ว
                 </span>
-                ส่งล่าสุดเมื่อวันที่ <b>{new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}</b>
+                <span className="text-[11px] text-amber-900 block mt-0.5">
+                  กิจกรรม: <b>{previousEmailLog.activity_type}</b> ({new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })})
+                </span>
                 {previousEmailLog.details && (
-                  <span className="text-[11px] text-amber-800 block mt-0.5 truncate">
-                    ({previousEmailLog.details.slice(0, 50)}...)
+                  <span className="text-[10.5px] text-amber-800/90 block mt-0.5 truncate">
+                    💬 {previousEmailLog.details}
                   </span>
                 )}
               </div>
