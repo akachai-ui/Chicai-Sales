@@ -11,6 +11,10 @@ import {
   CheckCircle2,
   Rocket,
   Building2,
+  Sparkles,
+  FileText,
+  Tag,
+  Check
 } from "lucide-react";
 
 interface EmailComposeModalProps {
@@ -142,43 +146,51 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-6 duration-250">
+        
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-900 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-              <Mail className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-base sm:text-lg flex items-center space-x-2">
-                <span>ส่งอีเมลนำเสนอสินค้า</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/30 text-emerald-100 border border-emerald-300/30">
-                  1-Click Auto
-                </span>
-              </h3>
-              <p className="text-xs text-teal-100 truncate max-w-xs sm:max-w-md flex items-center space-x-1 mt-0.5">
-                <Building2 className="w-3.5 h-3.5 opacity-80" />
-                <span>ผู้รับ: <b>{customer.name}</b></span>
-              </p>
-            </div>
-          </div>
+        <div className="pt-3.5 pb-4 px-4 sm:px-6 bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-800 text-white shrink-0 shadow-md">
+          {/* Mobile Drag/Pull Indicator */}
+          <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-3 sm:hidden" />
 
-          <div className="flex items-center space-x-1">
-            <button
-              type="button"
-              onClick={() => setShowWebhookSettings(!showWebhookSettings)}
-              className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
-              title="ตั้งค่า Webhook URL"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner shrink-0">
+                <Mail className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-black text-base sm:text-lg tracking-tight text-white leading-tight">
+                    ส่งอีเมลนำเสนอสินค้า
+                  </h3>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-400/25 text-emerald-100 border border-emerald-300/30 shrink-0">
+                    1-Click Auto
+                  </span>
+                </div>
+                <p className="text-xs text-teal-100 truncate flex items-center space-x-1.5 mt-0.5">
+                  <Building2 className="w-3.5 h-3.5 opacity-75 shrink-0" />
+                  <span className="truncate"><b>{customer.name}</b></span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowWebhookSettings(!showWebhookSettings)}
+                className="w-9 h-9 flex items-center justify-center text-white/80 hover:text-white rounded-full hover:bg-white/15 active:scale-95 transition-all"
+                title="ตั้งค่า Webhook URL"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onClose}
+                className="w-9 h-9 flex items-center justify-center text-white/80 hover:text-white rounded-full hover:bg-white/15 active:scale-95 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -204,12 +216,12 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
                 value={tempWebhookUrl}
                 onChange={(e) => setTempWebhookUrl(e.target.value)}
                 placeholder="https://script.google.com/macros/s/.../exec"
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
               />
               <button
                 type="button"
                 onClick={handleSaveWebhookUrl}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shrink-0"
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shrink-0"
               >
                 บันทึก
               </button>
@@ -218,103 +230,113 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
         )}
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-slate-800 text-xs sm:text-sm">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1 text-slate-800 text-xs sm:text-sm">
+          
           {/* Direct Send Success Notification Banner */}
           {directSendSuccess && (
-            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-sm">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-emerald-900 leading-relaxed">
-                <span className="font-extrabold text-sm block text-emerald-800">
-                  🎉 ส่งอีเมล E-Catalog ถึง {customer.name} สำเร็จเรียบร้อยแล้ว!
+            <div className="p-4 bg-gradient-to-br from-emerald-50 via-teal-50/50 to-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-3.5 animate-in zoom-in-95 duration-200 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Check className="w-5 h-5 stroke-[3]" />
+              </div>
+              <div className="text-xs text-emerald-950 leading-relaxed">
+                <span className="font-black text-sm block text-emerald-900">
+                  🎉 ส่งอีเมล E-Catalog สำเร็จเรียบร้อยแล้ว!
                 </span>
-                อีเมลพร้อมรูปภาพประกอบครบชุดได้ถูกส่งออกจาก Gmail (<code>akachai.chicai@gmail.com</code>) ของคุณแม็กแล้ว และระบบได้บันทึกประวัติการติดต่อลงใน Timeline ของโรงงานนี้ให้อัตโนมัติครับ
+                อีเมลพร้อมรูปภาพประกอบครบชุดได้ถูกส่งออกจาก Gmail (<code>akachai.chicai@gmail.com</code>) แล้ว และระบบได้บันทึกประวัติการติดต่อลงใน Timeline ของโรงงานนี้ให้อัตโนมัติครับ
               </div>
             </div>
           )}
 
           {/* Direct Send Error Notification Banner */}
           {directSendError && (
-            <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-sm">
-              <AlertCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-rose-900 leading-relaxed">
-                <span className="font-extrabold text-sm block text-rose-800">เกิดข้อผิดพลาดในการส่ง:</span>
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start space-x-3.5 animate-in zoom-in-95 duration-200 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="text-xs text-rose-950 leading-relaxed">
+                <span className="font-black text-sm block text-rose-900">เกิดข้อผิดพลาดในการส่ง:</span>
                 {directSendError}
               </div>
             </div>
           )}
 
           {/* Active Template Card */}
-          <div className="p-3.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border border-teal-200/80 rounded-2xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <span className="text-xl">🌟</span>
-              <div>
-                <h4 className="font-extrabold text-xs sm:text-sm text-teal-950">
-                  CHICAI Official (ลดต้นทุน 70% + On-site Demo)
-                </h4>
-                <p className="text-[11px] text-teal-700 mt-0.5">
-                  อีเมลทางการพร้อมรูปแบนเนอร์ E-Catalog, ตารางราคา และลายเซ็นจาก Google Drive
+          <div className="p-3.5 bg-gradient-to-r from-teal-50/90 via-emerald-50/60 to-teal-50/90 border border-teal-200/70 rounded-2xl flex items-center justify-between shadow-xs">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-lg shadow-xs shrink-0">
+                🌟
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                    CHICAI Official (ลดต้นทุน 70% + Demo)
+                  </h4>
+                </div>
+                <p className="text-[11px] text-teal-800 mt-0.5 truncate">
+                  E-Catalog แบรนด์ CHICAI ELECTRIC • รูปภาพจาก Google Drive
                 </p>
               </div>
             </div>
-            <span className="hidden sm:inline-block px-2.5 py-1 bg-teal-600 text-white rounded-lg text-[10px] font-bold shadow-xs">
-              ส่งผ่าน Gmail ทันที
+            <span className="hidden sm:inline-block px-2.5 py-1 bg-teal-700 text-white rounded-lg text-[10px] font-extrabold tracking-wider shrink-0 shadow-xs">
+              Gmail Direct
             </span>
           </div>
 
           {/* Email Recipient (To) */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              ถึง (To Email)
-            </label>
-            <div className="relative">
-              <input
-                type="email"
-                value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
-                placeholder="กรอกอีเมล เช่น purchasing@company.com หรือ admin@company.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 text-xs sm:text-sm font-medium"
-              />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center space-x-1">
+                <Mail className="w-3.5 h-3.5 text-teal-700" />
+                <span>ถึง (To Email)</span>
+              </label>
               {!toEmail && (
-                <span className="absolute right-3 top-2.5 text-[11px] font-semibold text-amber-600">
-                  ⚠️ ยังไม่มีอีเมลลูกค้า (กรอกเพิ่มได้ที่นี่)
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  ⚠️ ยังไม่มีอีเมล (กรอกเพิ่มได้)
                 </span>
               )}
             </div>
+            <input
+              type="email"
+              value={toEmail}
+              onChange={(e) => setToEmail(e.target.value)}
+              placeholder="กรอกอีเมล เช่น purchasing@company.com"
+              className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-xs sm:text-sm font-medium transition-all"
+            />
           </div>
 
           {/* Email Subject */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1.5">
               หัวข้ออีเมล (Subject)
             </label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 text-xs sm:text-sm font-bold text-slate-900"
+              className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-xs sm:text-sm font-bold text-slate-900 transition-all"
             />
           </div>
 
           {/* Email Body Preview */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1.5">
               เนื้อหาที่จะส่ง (Message Preview)
             </label>
             <textarea
-              rows={8}
+              rows={6}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full p-3 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 text-xs sm:text-sm font-sans leading-relaxed text-slate-800"
+              className="w-full p-3.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-xs sm:text-sm font-sans leading-relaxed text-slate-800 transition-all"
             />
           </div>
         </div>
 
         {/* Modal Footer / Action Buttons */}
-        <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom,16px))] bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-between gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors touch-press"
+            className="h-12 px-4 sm:px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press"
           >
             ปิด
           </button>
@@ -324,7 +346,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             type="button"
             disabled={isSendingDirect}
             onClick={handleDirectSendEmail}
-            className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-emerald-700/25 transition-all touch-press active:scale-95 disabled:opacity-60 cursor-pointer"
+            className="h-12 flex-1 flex items-center justify-center space-x-2 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-lg shadow-teal-700/20 transition-all active:scale-[0.98] touch-press disabled:opacity-60 cursor-pointer"
             title="ยิงอีเมล E-Catalog พร้อมรูปภาพอัตโนมัติ 1-Click ผ่าน Google Apps Script"
           >
             {isSendingDirect ? (
