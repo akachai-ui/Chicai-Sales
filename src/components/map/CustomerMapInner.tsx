@@ -1375,6 +1375,26 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
         isOpen={isEmailModalOpen}
         customer={emailCustomer}
         onClose={() => setIsEmailModalOpen(false)}
+        onEmailSent={() => {
+          if (emailCustomer) {
+            const updatedCust: Customer = {
+              ...emailCustomer,
+              pipeline_stage: 'ติดต่อแล้ว / ติดตามงาน',
+              activities_count: (emailCustomer.activities_count || 0) + 1,
+              latest_activity: {
+                id: Date.now(),
+                customer_id: emailCustomer.id,
+                activity_type: 'ส่งอีเมล',
+                activity_date: new Date().toISOString(),
+                contact_person: emailCustomer.contact_person || null,
+                details: `ส่งอีเมล E-Catalog CHICAI ELECTRIC (ลดต้นทุน 70% + On-site Demo)`,
+                next_action_date: null,
+                next_action_note: null,
+              },
+            };
+            handleCustomerUpdated(updatedCust);
+          }
+        }}
       />
 
     </div>
