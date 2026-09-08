@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const effectiveWebhookUrl = (webhookUrl && webhookUrl.trim()) 
       || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_WEBHOOK_URL 
-      || 'https://script.google.com/macros/s/AKfycbzgMv1TsTAhpmhJSdfsZBrfAvfuSLqIUnuGpx2TntdMyKCY0YZTeiKLIWTkbP9nFGj3/exec';
+      || 'https://script.google.com/macros/s/AKfycbw8Av-WvIll9-5zyeyUS8spsFVGZdFqVHf-Arkxa6nCwTk_GJA3xQeHNCv2BL-rfdYT/exec';
 
     if (!effectiveWebhookUrl) {
       return NextResponse.json(

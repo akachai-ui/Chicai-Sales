@@ -317,7 +317,7 @@ export default function EmailComposeModal({
   const [showWebhookSettings, setShowWebhookSettings] = useState<boolean>(false);
   const [tempWebhookUrl, setTempWebhookUrl] = useState<string>('');
 
-  const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzgMv1TsTAhpmhJSdfsZBrfAvfuSLqIUnuGpx2TntdMyKCY0YZTeiKLIWTkbP9nFGj3/exec';
+  const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw8Av-WvIll9-5zyeyUS8spsFVGZdFqVHf-Arkxa6nCwTk_GJA3xQeHNCv2BL-rfdYT/exec';
 
   // Load saved Webhook URL from localStorage or env
   useEffect(() => {
