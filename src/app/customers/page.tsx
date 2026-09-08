@@ -370,7 +370,7 @@ export default function CustomersPage() {
 
                     {/* DBD Quick Link */}
                     <a
-                      href={getDbdSearchUrl(c.name)}
+                      href={getDbdSearchUrl(c)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
@@ -461,7 +461,7 @@ export default function CustomersPage() {
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end space-x-1.5">
                               <a
-                                href={getDbdSearchUrl(c.name)}
+                                href={getDbdSearchUrl(c)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors text-[11px] flex items-center space-x-1"

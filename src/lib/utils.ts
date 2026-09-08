@@ -102,28 +102,9 @@ export function getCleanCompanyName(name: string): string {
 }
 
 /**
- * Returns DBD / Creden direct link (by tax_id if present) or smart search link
+ * Returns DBD direct profile link (by 13-digit tax_id) or smart Google DBD search link
  */
 export function getDbdSearchUrl(customerOrName: { name?: string; tax_id?: string | null; registered_name?: string | null } | string): string {
-  if (typeof customerOrName === 'string') {
-    const clean = getCleanCompanyName(customerOrName);
-    return `https://data.creden.co/search?q=${encodeURIComponent(clean)}`;
-  }
-
-  const taxId = customerOrName?.tax_id?.trim();
-  if (taxId && taxId.length >= 10) {
-    return `https://data.creden.co/company/${taxId}`;
-  }
-
-  const nameToSearch = customerOrName?.registered_name?.trim() || customerOrName?.name || '';
-  const clean = getCleanCompanyName(nameToSearch);
-  return `https://data.creden.co/search?q=${encodeURIComponent(clean)}`;
-}
-
-/**
- * Returns Google DBD DataWarehouse search query URL
- */
-export function getGoogleDbdSearchUrl(customerOrName: { name?: string; tax_id?: string | null; registered_name?: string | null } | string): string {
   if (typeof customerOrName === 'string') {
     const clean = getCleanCompanyName(customerOrName);
     return `https://www.google.com/search?q=${encodeURIComponent(clean + ' กรมพัฒนาธุรกิจการค้า DBD')}`;
@@ -137,4 +118,11 @@ export function getGoogleDbdSearchUrl(customerOrName: { name?: string; tax_id?: 
   const nameToSearch = customerOrName?.registered_name?.trim() || customerOrName?.name || '';
   const clean = getCleanCompanyName(nameToSearch);
   return `https://www.google.com/search?q=${encodeURIComponent(clean + ' กรมพัฒนาธุรกิจการค้า DBD')}`;
+}
+
+/**
+ * Returns Google DBD DataWarehouse search query URL
+ */
+export function getGoogleDbdSearchUrl(customerOrName: { name?: string; tax_id?: string | null; registered_name?: string | null } | string): string {
+  return getDbdSearchUrl(customerOrName);
 }

@@ -464,14 +464,10 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   ✉️ <a href="mailto:${cust.email}" style="color: #2563eb; text-decoration: underline;">${cust.email}</a>
                 </div>
               ` : ''}
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
-                <a href="${getDbdSearchUrl(cust)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
-                  <span>🏛️ Creden</span>
-                  <span style="font-size: 9px; color: #60a5fa;">↗</span>
-                </a>
-                <a href="${getGoogleDbdSearchUrl(cust)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
-                  <span>🔍 Google DBD</span>
-                  <span style="font-size: 9px; color: #94a3b8;">↗</span>
+              <div style="margin-top: 6px;">
+                <a href="${getDbdSearchUrl(cust)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 8px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
+                  <span>🏛️ ดูข้อมูลนิติบุคคล DBD / งบการเงิน</span>
+                  <span style="font-size: 10px; color: #60a5fa;">↗</span>
                 </a>
               </div>
               <div style="display: flex; gap: 6px; margin-top: 6px;">
@@ -563,14 +559,10 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               ✉️ <a href="mailto:${selectedCustomer.email}" style="color: #2563eb; text-decoration: underline;">${selectedCustomer.email}</a>
             </div>
           ` : ''}
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
-            <a href="${getDbdSearchUrl(selectedCustomer)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
-              <span>🏛️ Creden</span>
-              <span style="font-size: 9px; color: #60a5fa;">↗</span>
-            </a>
-            <a href="${getGoogleDbdSearchUrl(selectedCustomer)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
-              <span>🔍 Google DBD</span>
-              <span style="font-size: 9px; color: #94a3b8;">↗</span>
+          <div style="margin-top: 6px;">
+            <a href="${getDbdSearchUrl(selectedCustomer)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 8px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
+              <span>🏛️ ดูข้อมูลนิติบุคคล DBD / งบการเงิน</span>
+              <span style="font-size: 10px; color: #60a5fa;">↗</span>
             </a>
           </div>
           <div style="display: flex; gap: 6px; margin-top: 6px;">
@@ -1060,14 +1052,14 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
 
             {/* DBD Quick Link */}
             <a
-              href={getDbdSearchUrl(selectedCustomer.name)}
+              href={getDbdSearchUrl(selectedCustomer)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
             >
               <span className="flex items-center space-x-1.5">
                 <span>🏛️</span>
-                <span>ดูข้อมูลนิติบุคคล DBD / งบการเงิน</span>
+                <span>ดูข้อมูลนิติบุคคล DBD DataWarehouse</span>
               </span>
               <ExternalLink className="w-3 h-3 text-slate-400" />
             </a>

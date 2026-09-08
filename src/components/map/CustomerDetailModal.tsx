@@ -369,36 +369,22 @@ export default function CustomerDetailModal({
             </div>
 
             {/* DBD Quick Link */}
-            <div className="mt-2.5 flex items-center space-x-2">
-              <a
-                href={getDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-between p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
-                title="ดูข้อมูลนิติบุคคล ทุนจดทะเบียน และงบการเงิน บน Creden Data"
-              >
-                <span className="flex items-center space-x-1.5 truncate">
-                  <span>🏛️</span>
-                  <span className="truncate">DBD / Creden {customer.tax_id ? `(${customer.tax_id})` : ''}</span>
-                </span>
-                <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0 ml-1">
-                  <span>เปิดดู</span>
-                  <ExternalLink className="w-3 h-3" />
-                </span>
-              </a>
-
-              <a
-                href={getGoogleDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shrink-0"
-                title="ค้นหาบน Google DBD DataWarehouse"
-              >
-                <span>🔍</span>
-                <span>Google DBD</span>
-                <ExternalLink className="w-3 h-3 text-slate-500 ml-0.5" />
-              </a>
-            </div>
+            <a
+              href={getDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
+              title="ดูข้อมูลนิติบุคคล DBD DataWarehouse / งบการเงิน"
+            >
+              <span className="flex items-center space-x-1.5 truncate">
+                <span>🏛️</span>
+                <span className="truncate">ดูข้อมูลนิติบุคคล DBD DataWarehouse {customer.tax_id ? `(${customer.tax_id})` : ''}</span>
+              </span>
+              <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0 ml-1">
+                <span>เปิดดู</span>
+                <ExternalLink className="w-3 h-3" />
+              </span>
+            </a>
 
             {/* Tab Navigation */}
             <div className="flex border-b border-slate-200 mt-4 -mb-5">
