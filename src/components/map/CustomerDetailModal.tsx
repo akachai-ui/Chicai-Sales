@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, CustomerActivity, PIPELINE_STAGES, ACTIVITY_TYPES, getStageConfig } from '@/types/customer';
 import { supabase } from '@/lib/supabase';
+import { getDbdSearchUrl } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import {
@@ -359,6 +360,23 @@ export default function CustomerDetailModal({
                 <span className="truncate">Google Maps</span>
               </a>
             </div>
+
+            {/* DBD Quick Link */}
+            <a
+              href={getDbdSearchUrl(customer.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
+            >
+              <span className="flex items-center space-x-1.5">
+                <span>🏛️</span>
+                <span>ดูข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน / งบการเงิน</span>
+              </span>
+              <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0">
+                <span>เปิดดู</span>
+                <ExternalLink className="w-3 h-3" />
+              </span>
+            </a>
 
             {/* Tab Navigation */}
             <div className="flex border-b border-slate-200 mt-4 -mb-5">

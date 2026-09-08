@@ -5,6 +5,7 @@ import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import CustomerDetailModal from './CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import { generateDistrictZones, DistrictZone } from '@/lib/geo';
+import { getDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
 import Supercluster from 'supercluster';
 import {
   Search,
@@ -463,7 +464,11 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   ✉️ <a href="mailto:${cust.email}" style="color: #2563eb; text-decoration: underline;">${cust.email}</a>
                 </div>
               ` : ''}
-              <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <a href="${getDbdSearchUrl(cust.name)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; margin-top: 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
+                <span>🏛️ ดูข้อมูล DBD / งบการเงิน</span>
+                <span style="font-size: 10px; color: #64748b;">↗</span>
+              </a>
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
                 <button id="btn-details-${cust.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
                   ดูรายละเอียด & บันทึก
                 </button>
@@ -552,7 +557,11 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               ✉️ <a href="mailto:${selectedCustomer.email}" style="color: #2563eb; text-decoration: underline;">${selectedCustomer.email}</a>
             </div>
           ` : ''}
-          <div style="display: flex; gap: 6px; margin-top: 8px;">
+          <a href="${getDbdSearchUrl(selectedCustomer.name)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; margin-top: 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
+            <span>🏛️ ดูข้อมูล DBD / งบการเงิน</span>
+            <span style="font-size: 10px; color: #64748b;">↗</span>
+          </a>
+          <div style="display: flex; gap: 6px; margin-top: 6px;">
             <button id="btn-details-selected-${selectedCustomer.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
               ดูรายละเอียด & บันทึก
             </button>
@@ -1036,6 +1045,20 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                 <span className="text-[10px] text-slate-400">กดปุ่มโทรหรือบันทึกเพื่อเริ่มงาน</span>
               </div>
             )}
+
+            {/* DBD Quick Link */}
+            <a
+              href={getDbdSearchUrl(selectedCustomer.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
+            >
+              <span className="flex items-center space-x-1.5">
+                <span>🏛️</span>
+                <span>ดูข้อมูลนิติบุคคล DBD / งบการเงิน</span>
+              </span>
+              <ExternalLink className="w-3 h-3 text-slate-400" />
+            </a>
 
             {/* Quick Action Buttons Grid on Mobile Card */}
             <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">

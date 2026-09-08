@@ -7,6 +7,7 @@ import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import { supabase, fetchAllCustomers } from '@/lib/supabase';
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
+import { getDbdSearchUrl } from '@/lib/utils';
 import {
   Search,
   Filter,
@@ -366,6 +367,20 @@ export default function CustomersPage() {
                         <span>บันทึก</span>
                       </button>
                     </div>
+
+                    {/* DBD Quick Link */}
+                    <a
+                      href={getDbdSearchUrl(c.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
+                    >
+                      <span className="flex items-center space-x-1.5">
+                        <span>🏛️</span>
+                        <span>ดูข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน</span>
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </a>
                   </div>
                 );
               })}
@@ -445,6 +460,15 @@ export default function CustomersPage() {
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end space-x-1.5">
+                              <a
+                                href={getDbdSearchUrl(c.name)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors text-[11px] flex items-center space-x-1"
+                                title="ค้นหาข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน / งบการเงิน"
+                              >
+                                <span>🏛️ DBD</span>
+                              </a>
                               {c.google_maps_url && (
                                 <a
                                   href={c.google_maps_url}

@@ -64,3 +64,23 @@ export function generateQuotationNumber(index: number = 1): string {
   const seq = index.toString().padStart(4, '0');
   return `QT-${year}${month}-${seq}`;
 }
+
+export function getCleanCompanyName(name: string): string {
+  if (!name) return '';
+  // If format like "SCMP - บจก. สหะเจริญ..." extract the Thai/full company name
+  if (name.includes(' - ')) {
+    const parts = name.split(' - ');
+    return parts[parts.length - 1].trim();
+  }
+  return name.trim();
+}
+
+export function getDbdSearchUrl(companyName: string): string {
+  const clean = getCleanCompanyName(companyName);
+  return `https://data.creden.co/search?q=${encodeURIComponent(clean)}`;
+}
+
+export function getDbdOfficialUrl(companyName: string): string {
+  const clean = getCleanCompanyName(companyName);
+  return `https://www.google.com/search?q=${encodeURIComponent(clean + ' กรมพัฒนาธุรกิจการค้า dbd datawarehouse')}`;
+}
