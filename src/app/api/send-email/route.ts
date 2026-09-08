@@ -13,7 +13,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!webhookUrl || !webhookUrl.trim()) {
+    const effectiveWebhookUrl = (webhookUrl && webhookUrl.trim()) 
+      || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_WEBHOOK_URL 
+      || 'https://script.google.com/macros/s/AKfycbzgMv1TsTAhpmhJSdfsZBrfAvfuSLqIUnuGpx2TntdMyKCY0YZTeiKLIWTkbP9nFGj3/exec';
+
+    if (!effectiveWebhookUrl) {
       return NextResponse.json(
         { success: false, error: 'ยังไม่ได้ตั้งค่า Google Apps Script Webhook URL' },
         { status: 400 }
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Call Google Apps Script Webhook
-    const gasResponse = await fetch(webhookUrl.trim(), {
+    const gasResponse = await fetch(effectiveWebhookUrl.trim(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

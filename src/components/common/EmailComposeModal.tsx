@@ -317,10 +317,12 @@ export default function EmailComposeModal({
   const [showWebhookSettings, setShowWebhookSettings] = useState<boolean>(false);
   const [tempWebhookUrl, setTempWebhookUrl] = useState<string>('');
 
+  const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzgMv1TsTAhpmhJSdfsZBrfAvfuSLqIUnuGpx2TntdMyKCY0YZTeiKLIWTkbP9nFGj3/exec';
+
   // Load saved Webhook URL from localStorage or env
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('CHICAI_GAS_WEBHOOK_URL') || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_WEBHOOK_URL || '';
+      const saved = localStorage.getItem('CHICAI_GAS_WEBHOOK_URL') || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_WEBHOOK_URL || DEFAULT_WEBHOOK_URL;
       setGasWebhookUrl(saved);
       setTempWebhookUrl(saved);
     }
