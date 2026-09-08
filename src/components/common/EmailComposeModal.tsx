@@ -352,20 +352,29 @@ export default function EmailComposeModal({
     .filter(Boolean)
     .join(',');
 
-  // Safe Gmail Compose URL (Pass to and su; body is auto-copied to clipboard to prevent HTTP 400 Bad Request from long query strings)
+  // Safe Gmail Compose URL (Pass to, su, and safe-length body directly so text appears in Gmail automatically)
   const getGmailUrl = () => {
+    // If encoded body is within safe URL limit (< 1500 bytes), pass full body
+    // Otherwise pass a high-impact intro that fits safely without Error 400
+    let safeBody = body;
+    if (encodeURIComponent(body).length > 1500) {
+      // Create concise intro with key contacts and catalog link
+      safeBody = `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุง ${customer.name}\n\nCHICAI ELECTRIC ขอแนะนำเครื่องฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น ลดต้นทุน 70%\n• เครื่องกรองน้ำมันไฮดรอลิก LYJ Series (กรอง 1 ไมครอน)\n• เครื่องฟื้นฟูน้ำยาหล่อเย็น NXC-ZSJ Series (โอโซนฆ่าเชื้อ)\n• เครื่องดูดตะกรันและเศษโลหะ Sludge Cleaner\n\n* บริการพิเศษ: นำเครื่องสาธิต (Demo On-site) ฟรีถึงหน้างาน *\n📖 ดูแคตตาล็อกออนไลน์: https://catalog-chicai-lilac.vercel.app/\n\nขอแสดงความนับถือ,\nเอกชัย หาบ้านแท่น (แม็ก) 092-479-7666\nCHICAI ELECTRIC (THAILAND) CO., LTD.\nอีเมล: akachai.chicai@gmail.com`;
+    }
+
     const params = new URLSearchParams({
       view: 'cm',
       fs: '1',
       to: cleanToEmail,
       su: subject,
+      body: safeBody,
     });
     return `https://mail.google.com/mail/?${params.toString()}`;
   };
 
-  // Standard Mailto URL
+  // Standard Mailto URL (Carries full complete text since OS email client handles it)
   const getMailtoUrl = () => {
-    return `mailto:${encodeURIComponent(cleanToEmail)}?subject=${encodeURIComponent(subject)}`;
+    return `mailto:${encodeURIComponent(cleanToEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const handleOpenGmail = async () => {
