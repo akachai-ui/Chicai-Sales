@@ -29,6 +29,8 @@ export interface Customer {
   contact_result: string | null;
   notes: string | null;
   email: string | null;
+  tax_id?: string | null;
+  registered_name?: string | null;
   activities_count?: number;
   latest_activity?: CustomerActivity | null;
   created_at?: string;

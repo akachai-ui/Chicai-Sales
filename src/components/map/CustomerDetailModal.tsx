@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, CustomerActivity, PIPELINE_STAGES, ACTIVITY_TYPES, getStageConfig } from '@/types/customer';
 import { supabase } from '@/lib/supabase';
-import { getDbdSearchUrl } from '@/lib/utils';
+import { getDbdSearchUrl, getGoogleDbdSearchUrl } from '@/lib/utils';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import {
@@ -31,7 +31,8 @@ import {
   CalendarDays,
   ArrowRight,
   Edit,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 
 interface CustomerDetailModalProps {
@@ -57,6 +58,8 @@ export default function CustomerDetailModal({
   const [pipelineStage, setPipelineStage] = useState(customer.pipeline_stage || 'ยังไม่ได้ติดต่อ');
   const [contactPerson, setContactPerson] = useState(customer.contact_person || '');
   const [targetProduct, setTargetProduct] = useState(customer.target_product || '');
+  const [taxId, setTaxId] = useState(customer.tax_id || '');
+  const [registeredName, setRegisteredName] = useState(customer.registered_name || '');
   const [notes, setNotes] = useState(customer.notes || '');
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savedCustomerSuccess, setSavedCustomerSuccess] = useState(false);
@@ -111,6 +114,8 @@ export default function CustomerDetailModal({
       setPipelineStage(customer.pipeline_stage || 'ยังไม่ได้ติดต่อ');
       setContactPerson(customer.contact_person || '');
       setTargetProduct(customer.target_product || '');
+      setTaxId(customer.tax_id || '');
+      setRegisteredName(customer.registered_name || '');
       setNotes(customer.notes || '');
       setNewContactPerson(customer.contact_person || '');
       loadActivities();
@@ -127,6 +132,8 @@ export default function CustomerDetailModal({
         pipeline_stage: pipelineStage,
         contact_person: contactPerson,
         target_product: targetProduct,
+        tax_id: taxId.trim() || null,
+        registered_name: registeredName.trim() || null,
         notes: notes,
         updated_at: new Date().toISOString(),
       };
@@ -362,21 +369,36 @@ export default function CustomerDetailModal({
             </div>
 
             {/* DBD Quick Link */}
-            <a
-              href={getDbdSearchUrl(customer.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
-            >
-              <span className="flex items-center space-x-1.5">
-                <span>🏛️</span>
-                <span>ดูข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน / งบการเงิน</span>
-              </span>
-              <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0">
-                <span>เปิดดู</span>
-                <ExternalLink className="w-3 h-3" />
-              </span>
-            </a>
+            <div className="mt-2.5 flex items-center space-x-2">
+              <a
+                href={getDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-between p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
+                title="ดูข้อมูลนิติบุคคล ทุนจดทะเบียน และงบการเงิน บน Creden Data"
+              >
+                <span className="flex items-center space-x-1.5 truncate">
+                  <span>🏛️</span>
+                  <span className="truncate">DBD / Creden {customer.tax_id ? `(${customer.tax_id})` : ''}</span>
+                </span>
+                <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0 ml-1">
+                  <span>เปิดดู</span>
+                  <ExternalLink className="w-3 h-3" />
+                </span>
+              </a>
+
+              <a
+                href={getGoogleDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors shrink-0"
+                title="ค้นหาบน Google DBD DataWarehouse"
+              >
+                <span>🔍</span>
+                <span>Google DBD</span>
+                <ExternalLink className="w-3 h-3 text-slate-500 ml-0.5" />
+              </a>
+            </div>
 
             {/* Tab Navigation */}
             <div className="flex border-b border-slate-200 mt-4 -mb-5">
@@ -763,6 +785,46 @@ export default function CustomerDetailModal({
                         placeholder="เช่น เครื่องกรองน้ำมันไฮดรอลิก"
                         className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
+                    </div>
+                  </div>
+
+                  {/* DBD & Legal Info */}
+                  <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                        <span>ข้อมูลนิติบุคคล DBD / ข้อมูลทางการ</span>
+                      </span>
+                      <span className="text-[11px] text-slate-500">สำหรับผูกบัญชี DBD แม่นยำ 100%</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          ชื่อจดทะเบียน DBD (ถ้าต่างจากชื่อบนแผนที่)
+                        </label>
+                        <input
+                          type="text"
+                          value={registeredName}
+                          onChange={(e) => setRegisteredName(e.target.value)}
+                          placeholder="เช่น บริษัท สหะเจริญ โลหะพลาสติกภัณฑ์ จำกัด"
+                          className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          เลขนิติบุคคล 13 หลัก (Tax ID)
+                        </label>
+                        <input
+                          type="text"
+                          value={taxId}
+                          onChange={(e) => setTaxId(e.target.value)}
+                          placeholder="เช่น 0105548012345"
+                          maxLength={13}
+                          className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
 

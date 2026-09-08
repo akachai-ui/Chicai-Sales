@@ -17,7 +17,8 @@ import {
   Package,
   FileText,
   CheckCircle2,
-  Plus
+  Plus,
+  ShieldCheck
 } from 'lucide-react';
 
 interface CustomerFormModalProps {
@@ -40,6 +41,8 @@ export default function CustomerFormModal({
   // Form states
   const [name, setName] = useState(customer?.name || '');
   const [seq, setSeq] = useState<string>(customer?.seq ? String(customer.seq) : '');
+  const [taxId, setTaxId] = useState(customer?.tax_id || '');
+  const [registeredName, setRegisteredName] = useState(customer?.registered_name || '');
   const [phone, setPhone] = useState(customer?.phone || '');
   const [email, setEmail] = useState(customer?.email || '');
   const [website, setWebsite] = useState(customer?.website || '');
@@ -62,6 +65,8 @@ export default function CustomerFormModal({
     if (customer) {
       setName(customer.name || '');
       setSeq(customer.seq ? String(customer.seq) : '');
+      setTaxId(customer.tax_id || '');
+      setRegisteredName(customer.registered_name || '');
       setPhone(customer.phone || '');
       setEmail(customer.email || '');
       setWebsite(customer.website || '');
@@ -79,6 +84,8 @@ export default function CustomerFormModal({
     } else {
       setName('');
       setSeq('');
+      setTaxId('');
+      setRegisteredName('');
       setPhone('');
       setEmail('');
       setWebsite('');
@@ -130,6 +137,8 @@ export default function CustomerFormModal({
       const payload = {
         name: name.trim(),
         seq: seq.trim() ? parseInt(seq.trim()) : null,
+        tax_id: taxId.trim() || null,
+        registered_name: registeredName.trim() || null,
         phone: phone.trim() || null,
         email: email.trim() || null,
         website: website.trim() || null,
@@ -254,6 +263,44 @@ export default function CustomerFormModal({
                   placeholder="เช่น 1090"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+              </div>
+            </div>
+
+            {/* DBD & Legal Info */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>ข้อมูลจดทะเบียน DBD / เลขนิติบุคคล (ถ้ามี)</span>
+                </span>
+                <span className="text-[11px] text-slate-400">ใช้เปิดดูงบการเงิน & ทุนจดทะเบียน</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    ชื่อจดทะเบียน DBD (กรณีชื่อบนแมพไม่ตรง)
+                  </label>
+                  <input
+                    type="text"
+                    value={registeredName}
+                    onChange={(e) => setRegisteredName(e.target.value)}
+                    placeholder="เช่น บริษัท สยาม ออโต้พาร์ท จำกัด"
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    เลขนิติบุคคล 13 หลัก (Tax ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    placeholder="เช่น 0105548012345"
+                    maxLength={13}
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-mono"
+                  />
+                </div>
               </div>
             </div>
 

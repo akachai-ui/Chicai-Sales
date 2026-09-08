@@ -5,7 +5,7 @@ import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import CustomerDetailModal from './CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import { generateDistrictZones, DistrictZone } from '@/lib/geo';
-import { getDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
+import { getDbdSearchUrl, getGoogleDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
 import Supercluster from 'supercluster';
 import {
   Search,
@@ -464,10 +464,16 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
                   ✉️ <a href="mailto:${cust.email}" style="color: #2563eb; text-decoration: underline;">${cust.email}</a>
                 </div>
               ` : ''}
-              <a href="${getDbdSearchUrl(cust.name)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; margin-top: 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
-                <span>🏛️ ดูข้อมูล DBD / งบการเงิน</span>
-                <span style="font-size: 10px; color: #64748b;">↗</span>
-              </a>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
+                <a href="${getDbdSearchUrl(cust)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
+                  <span>🏛️ Creden</span>
+                  <span style="font-size: 9px; color: #60a5fa;">↗</span>
+                </a>
+                <a href="${getGoogleDbdSearchUrl(cust)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
+                  <span>🔍 Google DBD</span>
+                  <span style="font-size: 9px; color: #94a3b8;">↗</span>
+                </a>
+              </div>
               <div style="display: flex; gap: 6px; margin-top: 6px;">
                 <button id="btn-details-${cust.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
                   ดูรายละเอียด & บันทึก
@@ -557,10 +563,16 @@ export default function CustomerMapInner({ initialCustomers }: CustomerMapInnerP
               ✉️ <a href="mailto:${selectedCustomer.email}" style="color: #2563eb; text-decoration: underline;">${selectedCustomer.email}</a>
             </div>
           ` : ''}
-          <a href="${getDbdSearchUrl(selectedCustomer.name)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; margin-top: 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
-            <span>🏛️ ดูข้อมูล DBD / งบการเงิน</span>
-            <span style="font-size: 10px; color: #64748b;">↗</span>
-          </a>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
+            <a href="${getDbdSearchUrl(selectedCustomer)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700; color: #1d4ed8; text-decoration: none; cursor: pointer;">
+              <span>🏛️ Creden</span>
+              <span style="font-size: 9px; color: #60a5fa;">↗</span>
+            </a>
+            <a href="${getGoogleDbdSearchUrl(selectedCustomer)}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 6px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; color: #334155; text-decoration: none; cursor: pointer;">
+              <span>🔍 Google DBD</span>
+              <span style="font-size: 9px; color: #94a3b8;">↗</span>
+            </a>
+          </div>
           <div style="display: flex; gap: 6px; margin-top: 6px;">
             <button id="btn-details-selected-${selectedCustomer.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
               ดูรายละเอียด & บันทึก
