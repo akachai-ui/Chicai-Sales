@@ -300,6 +300,7 @@ export default function EmailComposeModal({
   const [body, setBody] = useState<string>('');
   const [copiedText, setCopiedText] = useState<boolean>(false);
   const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
+  const [gmailNotice, setGmailNotice] = useState<boolean>(false);
 
   // Apply template with replaced variables
   const applyTemplate = (templateId: string, cust: Customer | null) => {
@@ -336,6 +337,7 @@ export default function EmailComposeModal({
       setViewMode('text');
       setCopiedText(false);
       setCopiedHtml(false);
+      setGmailNotice(false);
     }
   }, [isOpen, customer]);
 
@@ -343,28 +345,50 @@ export default function EmailComposeModal({
 
   const htmlContent = getFullHtmlTemplate(customer.name);
 
-  // Gmail Web & Mobile App Direct Compose URL
+  // Format clean comma-separated emails
+  const cleanToEmail = toEmail
+    .split(/[,;\n]+/)
+    .map((e) => e.trim())
+    .filter(Boolean)
+    .join(',');
+
+  // Safe Gmail Compose URL (Pass to and su; body is auto-copied to clipboard to prevent HTTP 400 Bad Request from long query strings)
   const getGmailUrl = () => {
     const params = new URLSearchParams({
       view: 'cm',
       fs: '1',
-      to: toEmail.trim(),
+      to: cleanToEmail,
       su: subject,
-      body: body,
     });
     return `https://mail.google.com/mail/?${params.toString()}`;
   };
 
-  // Standard Mailto URL (Apple Mail / Outlook / Default Email Client)
+  // Standard Mailto URL
   const getMailtoUrl = () => {
-    return `mailto:${encodeURIComponent(toEmail.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return `mailto:${encodeURIComponent(cleanToEmail)}?subject=${encodeURIComponent(subject)}`;
   };
 
-  const handleOpenGmail = () => {
+  const handleOpenGmail = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopiedText(true);
+      setGmailNotice(true);
+      setTimeout(() => setCopiedText(false), 4000);
+    } catch (err) {
+      console.error('Clipboard copy failed', err);
+    }
     window.open(getGmailUrl(), '_blank', 'noopener,noreferrer');
   };
 
-  const handleOpenMailto = () => {
+  const handleOpenMailto = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopiedText(true);
+      setGmailNotice(true);
+      setTimeout(() => setCopiedText(false), 4000);
+    } catch (err) {
+      console.error('Clipboard copy failed', err);
+    }
     window.location.href = getMailtoUrl();
   };
 
@@ -457,6 +481,17 @@ export default function EmailComposeModal({
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-slate-800 text-xs sm:text-sm">
           
+          {/* Quick Notice Banner */}
+          {gmailNotice && (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-2.5 animate-in fade-in duration-200">
+              <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-emerald-900 leading-relaxed">
+                <span className="font-extrabold block text-emerald-800">✅ คัดลอกเนื้อหาอีเมลให้อัตโนมัติแล้ว!</span>
+                หน้าต่าง Gmail กำลังเปิดขึ้นมา พร้อมใส่อีเมลผู้รับและหัวข้อให้แล้ว เพียงกด <b>"วาง" (Ctrl+V หรือ Cmd+V)</b> ในช่องเนื้อหาของ Gmail ได้ทันทีครับ
+              </div>
+            </div>
+          )}
+
           {viewMode === 'text' ? (
             <>
               {/* Template Selector Pills */}
