@@ -12,13 +12,19 @@ import {
   Sparkles,
   ExternalLink,
   Phone,
-  FileText
+  FileText,
+  Settings,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Rocket
 } from 'lucide-react';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
   customer: Customer | null;
   onClose: () => void;
+  onEmailSent?: () => void;
 }
 
 interface EmailTemplate {
@@ -292,6 +298,7 @@ export default function EmailComposeModal({
   isOpen,
   customer,
   onClose,
+  onEmailSent,
 }: EmailComposeModalProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('chicai_official');
   const [viewMode, setViewMode] = useState<'text' | 'html'>('text');
@@ -301,6 +308,31 @@ export default function EmailComposeModal({
   const [copiedText, setCopiedText] = useState<boolean>(false);
   const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
   const [gmailNotice, setGmailNotice] = useState<boolean>(false);
+
+  // Direct Send via Google Apps Script State
+  const [gasWebhookUrl, setGasWebhookUrl] = useState<string>('');
+  const [isSendingDirect, setIsSendingDirect] = useState<boolean>(false);
+  const [directSendSuccess, setDirectSendSuccess] = useState<boolean>(false);
+  const [directSendError, setDirectSendError] = useState<string | null>(null);
+  const [showWebhookSettings, setShowWebhookSettings] = useState<boolean>(false);
+  const [tempWebhookUrl, setTempWebhookUrl] = useState<string>('');
+
+  // Load saved Webhook URL from localStorage or env
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('CHICAI_GAS_WEBHOOK_URL') || process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_WEBHOOK_URL || '';
+      setGasWebhookUrl(saved);
+      setTempWebhookUrl(saved);
+    }
+  }, []);
+
+  const handleSaveWebhookUrl = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('CHICAI_GAS_WEBHOOK_URL', tempWebhookUrl.trim());
+      setGasWebhookUrl(tempWebhookUrl.trim());
+      setShowWebhookSettings(false);
+    }
+  };
 
   // Apply template with replaced variables
   const applyTemplate = (templateId: string, cust: Customer | null) => {
@@ -338,6 +370,8 @@ export default function EmailComposeModal({
       setCopiedText(false);
       setCopiedHtml(false);
       setGmailNotice(false);
+      setDirectSendSuccess(false);
+      setDirectSendError(null);
     }
   }, [isOpen, customer]);
 
@@ -352,13 +386,10 @@ export default function EmailComposeModal({
     .filter(Boolean)
     .join(',');
 
-  // Safe Gmail Compose URL (Pass to, su, and safe-length body directly so text appears in Gmail automatically)
+  // Safe Gmail Compose URL
   const getGmailUrl = () => {
-    // If encoded body is within safe URL limit (< 1500 bytes), pass full body
-    // Otherwise pass a high-impact intro that fits safely without Error 400
     let safeBody = body;
     if (encodeURIComponent(body).length > 1500) {
-      // Create concise intro with key contacts and catalog link
       safeBody = `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุง ${customer.name}\n\nCHICAI ELECTRIC ขอแนะนำเครื่องฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น ลดต้นทุน 70%\n• เครื่องกรองน้ำมันไฮดรอลิก LYJ Series (กรอง 1 ไมครอน)\n• เครื่องฟื้นฟูน้ำยาหล่อเย็น NXC-ZSJ Series (โอโซนฆ่าเชื้อ)\n• เครื่องดูดตะกรันและเศษโลหะ Sludge Cleaner\n\n* บริการพิเศษ: นำเครื่องสาธิต (Demo On-site) ฟรีถึงหน้างาน *\n📖 ดูแคตตาล็อกออนไลน์: https://catalog-chicai-lilac.vercel.app/\n\nขอแสดงความนับถือ,\nเอกชัย หาบ้านแท่น (แม็ก) 092-479-7666\nCHICAI ELECTRIC (THAILAND) CO., LTD.\nอีเมล: akachai.chicai@gmail.com`;
     }
 
@@ -372,9 +403,54 @@ export default function EmailComposeModal({
     return `https://mail.google.com/mail/?${params.toString()}`;
   };
 
-  // Standard Mailto URL (Carries full complete text since OS email client handles it)
+  // Standard Mailto URL
   const getMailtoUrl = () => {
     return `mailto:${encodeURIComponent(cleanToEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // 1-Click Direct Send via Google Apps Script
+  const handleDirectSendEmail = async () => {
+    if (!cleanToEmail) {
+      alert('กรุณาระบุอีเมลผู้รับก่อนส่ง');
+      return;
+    }
+    if (!gasWebhookUrl) {
+      setShowWebhookSettings(true);
+      return;
+    }
+
+    setIsSendingDirect(true);
+    setDirectSendError(null);
+    setDirectSendSuccess(false);
+
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: customer.id,
+          companyName: customer.name,
+          email: cleanToEmail,
+          webhookUrl: gasWebhookUrl.trim(),
+          contactPerson: customer.contact_person,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'ส่งอีเมลไม่สำเร็จ');
+      }
+
+      setDirectSendSuccess(true);
+      if (onEmailSent) {
+        onEmailSent();
+      }
+    } catch (err: any) {
+      console.error('Error sending direct email:', err);
+      setDirectSendError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script');
+    } finally {
+      setIsSendingDirect(false);
+    }
   };
 
   const handleOpenGmail = async () => {
@@ -434,7 +510,7 @@ export default function EmailComposeModal({
             </div>
             <div>
               <h3 className="font-extrabold text-base sm:text-lg flex items-center space-x-2">
-                <span>ส่งอีเมล / Gmail</span>
+                <span>ส่งอีเมลนำเสนอสินค้า</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/30 text-emerald-100 border border-emerald-300/30">
                   CHICAI ELECTRIC
                 </span>
@@ -445,13 +521,61 @@ export default function EmailComposeModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              type="button"
+              onClick={() => setShowWebhookSettings(!showWebhookSettings)}
+              className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+              title="ตั้งค่า Google Apps Script Webhook URL"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {/* Webhook Configuration Drawer/Box */}
+        {showWebhookSettings && (
+          <div className="bg-slate-900 text-slate-100 p-4 border-b border-slate-700 text-xs space-y-2 animate-in slide-in-from-top duration-150">
+            <div className="flex items-center justify-between">
+              <span className="font-bold flex items-center space-x-1 text-emerald-400">
+                <Settings className="w-3.5 h-3.5" />
+                <span>ตั้งค่า Google Apps Script Webhook URL (สำหรับส่งอัตโนมัติ 1-Click)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowWebhookSettings(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-slate-400 text-[11px]">
+              วาง Web App URL ที่ได้จากการ Deploy Google Apps Script ของคุณแม็ก (เช่น <code>https://script.google.com/macros/s/.../exec</code>)
+            </p>
+            <div className="flex items-center space-x-2 pt-1">
+              <input
+                type="url"
+                value={tempWebhookUrl}
+                onChange={(e) => setTempWebhookUrl(e.target.value)}
+                placeholder="https://script.google.com/macros/s/AKfycbx.../exec"
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <button
+                type="button"
+                onClick={handleSaveWebhookUrl}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shrink-0"
+              >
+                บันทึก URL
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Sub-header Tabs (Text Mode vs HTML Mode) */}
         <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
@@ -490,13 +614,35 @@ export default function EmailComposeModal({
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-slate-800 text-xs sm:text-sm">
           
-          {/* Quick Notice Banner */}
+          {/* Direct Send Success Notification Banner */}
+          {directSendSuccess && (
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-sm">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-emerald-900 leading-relaxed">
+                <span className="font-extrabold text-sm block text-emerald-800">🎉 ส่งอีเมล E-Catalog ถึง {customer.name} สำเร็จเรียบร้อยแล้ว!</span>
+                อีเมลพร้อมรูปภาพได้ถูกส่งออกจาก Gmail (<code>akachai.chicai@gmail.com</code>) ของคุณแม็กแล้ว และระบบได้บันทึกประวัติการติดต่อลงใน Timeline ของโรงงานนี้ให้อัตโนมัติครับ
+              </div>
+            </div>
+          )}
+
+          {/* Direct Send Error Notification Banner */}
+          {directSendError && (
+            <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-sm">
+              <AlertCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-900 leading-relaxed">
+                <span className="font-extrabold text-sm block text-rose-800">เกิดข้อผิดพลาดในการส่ง:</span>
+                {directSendError}
+              </div>
+            </div>
+          )}
+
+          {/* Gmail Notice Banner */}
           {gmailNotice && (
             <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-start space-x-2.5 animate-in fade-in duration-200">
               <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div className="text-xs text-emerald-900 leading-relaxed">
                 <span className="font-extrabold block text-emerald-800">✅ คัดลอกเนื้อหาอีเมลให้อัตโนมัติแล้ว!</span>
-                หน้าต่าง Gmail กำลังเปิดขึ้นมา พร้อมใส่อีเมลผู้รับและหัวข้อให้แล้ว เพียงกด <b>"วาง" (Ctrl+V หรือ Cmd+V)</b> ในช่องเนื้อหาของ Gmail ได้ทันทีครับ
+                หน้าต่าง Gmail กำลังเปิดขึ้นมา พร้อมใส่อีเมลผู้รับและหัวข้อให้แล้ว สามารถกด <b>"วาง" (Ctrl+V หรือ Cmd+V)</b> ในช่องเนื้อหาของ Gmail ได้ทันทีครับ
               </div>
             </div>
           )}
@@ -637,29 +783,41 @@ export default function EmailComposeModal({
             <span>{copiedText ? 'คัดลอกข้อความแล้ว' : 'คัดลอกข้อความทั้งหมด'}</span>
           </button>
 
-          <div className="flex items-center space-x-2">
-            {/* Default Mail App Link */}
+          <div className="flex flex-wrap items-center gap-2">
+            
+            {/* 1-Click Direct Send Button via Google Apps Script Webhook */}
             <button
               type="button"
-              onClick={handleOpenMailto}
-              className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors touch-press"
-              title="เปิดในแอปเมลเริ่มต้น (Apple Mail / Outlook)"
+              disabled={isSendingDirect}
+              onClick={handleDirectSendEmail}
+              className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-extrabold shadow-md shadow-emerald-700/30 transition-all touch-press active:scale-95 disabled:opacity-60"
+              title="ยิงอีเมล E-Catalog พร้อมรูปภาพอัตโนมัติ 1-Click ผ่าน Google Apps Script"
             >
-              <Mail className="w-4 h-4 text-slate-600" />
-              <span>แอปเมลทั่วไป</span>
+              {isSendingDirect ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>กำลังส่งอีเมลผ่าน Gmail...</span>
+                </>
+              ) : (
+                <>
+                  <Rocket className="w-4 h-4" />
+                  <span>🚀 ส่งอัตโนมัติ (1-Click)</span>
+                </>
+              )}
             </button>
 
-            {/* Direct Gmail Button */}
+            {/* Manual Gmail Button */}
             <button
               type="button"
               onClick={handleOpenGmail}
-              className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-md shadow-teal-700/30 transition-all touch-press active:scale-95"
-              title="เปิดหน้าเขียนอีเมลใน Gmail ทันที"
+              className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-all touch-press"
+              title="เปิดหน้าเขียนอีเมลใน Gmail"
             >
-              <Send className="w-4 h-4" />
-              <span>เปิดใน Gmail</span>
-              <ExternalLink className="w-3 h-3 text-teal-200" />
+              <Send className="w-3.5 h-3.5 text-teal-700" />
+              <span>เปิด Gmail</span>
+              <ExternalLink className="w-3 h-3 text-slate-400" />
             </button>
+
           </div>
 
         </div>
