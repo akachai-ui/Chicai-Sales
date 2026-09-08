@@ -56,10 +56,11 @@ export default function CustomerDetailModal({
 
   // Customer Base Fields
   const [pipelineStage, setPipelineStage] = useState(customer.pipeline_stage || 'ยังไม่ได้ติดต่อ');
+  const [phone, setPhone] = useState(customer.phone || '');
+  const [email, setEmail] = useState(customer.email || '');
+  const [website, setWebsite] = useState(customer.website || '');
   const [contactPerson, setContactPerson] = useState(customer.contact_person || '');
   const [targetProduct, setTargetProduct] = useState(customer.target_product || '');
-  const [taxId, setTaxId] = useState(customer.tax_id || '');
-  const [registeredName, setRegisteredName] = useState(customer.registered_name || '');
   const [notes, setNotes] = useState(customer.notes || '');
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savedCustomerSuccess, setSavedCustomerSuccess] = useState(false);
@@ -112,10 +113,11 @@ export default function CustomerDetailModal({
   useEffect(() => {
     if (customer?.id) {
       setPipelineStage(customer.pipeline_stage || 'ยังไม่ได้ติดต่อ');
+      setPhone(customer.phone || '');
+      setEmail(customer.email || '');
+      setWebsite(customer.website || '');
       setContactPerson(customer.contact_person || '');
       setTargetProduct(customer.target_product || '');
-      setTaxId(customer.tax_id || '');
-      setRegisteredName(customer.registered_name || '');
       setNotes(customer.notes || '');
       setNewContactPerson(customer.contact_person || '');
       loadActivities();
@@ -128,40 +130,23 @@ export default function CustomerDetailModal({
   const handleSaveCustomer = async () => {
     setSavingCustomer(true);
     try {
-      const updates: any = {
+      const updates = {
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        website: website.trim() || null,
         pipeline_stage: pipelineStage,
-        contact_person: contactPerson,
-        target_product: targetProduct,
-        tax_id: taxId.trim() || null,
-        registered_name: registeredName.trim() || null,
-        notes: notes,
+        contact_person: contactPerson.trim() || null,
+        target_product: targetProduct.trim() || null,
+        notes: notes.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('customers')
         .update(updates)
         .eq('id', customer.id)
         .select()
         .single();
-
-      // Fallback if tax_id / registered_name columns do not exist in DB yet
-      if (error && (error.message.includes('registered_name') || error.message.includes('tax_id') || error.code === 'PGRST204')) {
-        delete updates.tax_id;
-        delete updates.registered_name;
-        const retry = await supabase
-          .from('customers')
-          .update(updates)
-          .eq('id', customer.id)
-          .select()
-          .single();
-
-        if (!retry.error && retry.data) {
-          data = retry.data;
-          error = null;
-          alert('บันทึกข้อมูลหลักสำเร็จ!\n\nหมายเหตุ: หากต้องการบันทึกเลขนิติบุคคล 13 หลัก และชื่อจดทะเบียน DBD ลงฐานข้อมูล กรุณารันคำสั่ง SQL ใน Supabase SQL Editor:\n\nALTER TABLE customers ADD COLUMN IF NOT EXISTS tax_id TEXT;\nALTER TABLE customers ADD COLUMN IF NOT EXISTS registered_name TEXT;');
-        }
-      }
 
       if (error) {
         alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
@@ -400,7 +385,7 @@ export default function CustomerDetailModal({
 
             {/* DBD Quick Link */}
             <a
-              href={getDbdSearchUrl({ name: customer.name, tax_id: taxId || customer.tax_id, registered_name: registeredName || customer.registered_name })}
+              href={getDbdSearchUrl(customer)}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
@@ -408,7 +393,7 @@ export default function CustomerDetailModal({
             >
               <span className="flex items-center space-x-1.5 truncate">
                 <span>🏛️</span>
-                <span className="truncate">ดูข้อมูลนิติบุคคล DBD DataWarehouse {customer.tax_id ? `(${customer.tax_id})` : ''}</span>
+                <span className="truncate">ดูข้อมูลนิติบุคคล DBD DataWarehouse</span>
               </span>
               <span className="flex items-center space-x-1 text-[11px] text-blue-600 font-semibold shrink-0 ml-1">
                 <span>เปิดดู</span>
@@ -772,9 +757,55 @@ export default function CustomerDetailModal({
 
                 {/* Sales Fields Editing */}
                 <div className="pt-5 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">บันทึกข้อมูลหลัก</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">บันทึก & แก้ไขข้อมูลโรงงาน</h3>
                   
+                  {/* Phone & Email Inputs */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>เบอร์โทรศัพท์</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="เช่น 02 123 4567, 081 234 5678"
+                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        <span>อีเมล (Email)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="เช่น contact@factory.com"
+                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Website & Contact Person */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
+                        <Globe className="w-3.5 h-3.5 text-slate-400" />
+                        <span>เว็บไซต์ (Website)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder="เช่น https://www.factory.com"
+                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
                         <User className="w-3.5 h-3.5 text-slate-400" />
@@ -788,60 +819,20 @@ export default function CustomerDetailModal({
                         className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
-                        <Package className="w-3.5 h-3.5 text-slate-400" />
-                        <span>สินค้าเป้าหมาย</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={targetProduct}
-                        onChange={(e) => setTargetProduct(e.target.value)}
-                        placeholder="เช่น เครื่องกรองน้ำมันไฮดรอลิก"
-                        className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
                   </div>
 
-                  {/* DBD & Legal Info */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                        <span>ข้อมูลนิติบุคคล DBD / ข้อมูลทางการ</span>
-                      </span>
-                      <span className="text-[11px] text-slate-500">สำหรับผูกบัญชี DBD แม่นยำ 100%</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          ชื่อจดทะเบียน DBD (ถ้าต่างจากชื่อบนแผนที่)
-                        </label>
-                        <input
-                          type="text"
-                          value={registeredName}
-                          onChange={(e) => setRegisteredName(e.target.value)}
-                          placeholder="เช่น บริษัท สหะเจริญ โลหะพลาสติกภัณฑ์ จำกัด"
-                          className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          เลขนิติบุคคล 13 หลัก (Tax ID)
-                        </label>
-                        <input
-                          type="text"
-                          value={taxId}
-                          onChange={(e) => setTaxId(e.target.value)}
-                          placeholder="เช่น 0105548012345"
-                          maxLength={13}
-                          className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
-                        />
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center space-x-1.5">
+                      <Package className="w-3.5 h-3.5 text-slate-400" />
+                      <span>สินค้าเป้าหมาย</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={targetProduct}
+                      onChange={(e) => setTargetProduct(e.target.value)}
+                      placeholder="เช่น เครื่องกรองน้ำมันไฮดรอลิก / เครื่องฟื้นฟูน้ำยาหล่อเย็น"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
                   </div>
 
                   <div>
