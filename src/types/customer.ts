@@ -30,6 +30,8 @@ export interface Customer {
   notes: string | null;
   email: string | null;
   tax_id?: string | null;
+  dbd_company_id?: number | null;
+  registered_capital?: number | null;
   registered_name?: string | null;
   activities_count?: number;
   latest_activity?: CustomerActivity | null;
