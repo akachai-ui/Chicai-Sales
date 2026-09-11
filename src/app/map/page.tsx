@@ -3,32 +3,36 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import CustomerMap from '@/components/map/CustomerMap';
-import { supabase, fetchAllCustomers } from '@/lib/supabase';
-import { Customer } from '@/types/customer';
+import { fetchAllCustomers, fetchAllDbdCompanies } from '@/lib/supabase';
+import { Customer, DBDCompany } from '@/types/customer';
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function MapPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [dbdCompanies, setDbdCompanies] = useState<DBDCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCustomers = async () => {
+  const fetchMapData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAllCustomers();
-      setCustomers(data || []);
+      const [crmData, dbdData] = await Promise.all([
+        fetchAllCustomers(),
+        fetchAllDbdCompanies(),
+      ]);
+      setCustomers(crmData || []);
+      setDbdCompanies(dbdData || []);
     } catch (err: any) {
-      console.error('Error fetching customers for map:', err);
-      setError(err.message || 'ไม่สามารถโหลดข้อมูลลูกค้าได้');
+      console.error('Error fetching data for dual map:', err);
+      setError(err.message || 'ไม่สามารถโหลดข้อมูลแผนที่ได้');
     } finally {
       setLoading(false);
     }
   };
 
-
   useEffect(() => {
-    fetchCustomers();
+    fetchMapData();
   }, []);
 
   return (
@@ -40,8 +44,10 @@ export default function MapPage() {
           <div className="w-full h-[calc(100vh-4rem)] flex flex-col items-center justify-center space-y-4">
             <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
             <div className="text-center">
-              <p className="text-base font-bold text-slate-800">กำลังเชื่อมต่อฐานข้อมูล Supabase...</p>
-              <p className="text-xs text-slate-500 mt-1">กำลังโหลดหมุดโรงงาน 1,000+ แห่งบนแผนที่</p>
+              <p className="text-base font-bold text-slate-800">กำลังเชื่อมต่อฐานข้อมูล Smart Map 2 เลเยอร์...</p>
+              <p className="text-xs text-slate-500 mt-1">
+                กำลังโหลดลูกค้า CRM และโรงงานอุตสาหกรรม DBD 3,100+ แห่ง
+              </p>
             </div>
           </div>
         ) : error ? (
@@ -50,7 +56,7 @@ export default function MapPage() {
             <h3 className="text-lg font-bold text-slate-900">เกิดข้อผิดพลาดในการโหลดข้อมูล</h3>
             <p className="text-sm text-slate-600 max-w-md mt-1">{error}</p>
             <button
-              onClick={fetchCustomers}
+              onClick={fetchMapData}
               className="mt-4 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-all"
             >
               <RefreshCw className="w-4 h-4" />
@@ -58,7 +64,7 @@ export default function MapPage() {
             </button>
           </div>
         ) : (
-          <CustomerMap initialCustomers={customers} />
+          <CustomerMap initialCustomers={customers} initialDbdCompanies={dbdCompanies} />
         )}
       </main>
     </div>
