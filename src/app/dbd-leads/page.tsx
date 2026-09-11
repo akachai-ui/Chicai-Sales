@@ -19,7 +19,17 @@ import {
   ChevronRight,
   RefreshCw,
   Sparkles,
-  BadgeInfo
+  Eye,
+  X,
+  Copy,
+  Check,
+  Navigation,
+  FileText,
+  Coins,
+  Calendar,
+  Layers,
+  ShieldCheck,
+  Compass
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,6 +51,11 @@ export default function DBDLeadsPage() {
   const [importingId, setImportingId] = useState<number | null>(null);
   const [importSuccessId, setImportSuccessId] = useState<number | null>(null);
 
+  // Detail Modal State
+  const [selectedCompany, setSelectedCompany] = useState<DBDCompany | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [copiedTaxId, setCopiedTaxId] = useState(false);
+
   // Summary counts
   const [stats, setStats] = useState({
     totalFactories: 0,
@@ -51,16 +66,17 @@ export default function DBDLeadsPage() {
   });
 
   const isGoogleBusinessProfile = (c: { google_maps_url?: string | null; phone?: string | null; pin_type?: string | null }) => {
-    if (c.pin_type === 'GOOGLE_BUSINESS') return true;
     if (c.pin_type === 'DBD_ADDRESS') return false;
+    if (c.pin_type === 'GOOGLE_BUSINESS') return true;
     return !!(c.google_maps_url && c.google_maps_url.includes('place_id'));
   };
 
   const fetchExistingCustomers = async () => {
     try {
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from('customers')
-        .select('id, tax_id, dbd_company_id');
+        .select('id, tax_id, dbd_company_id', { count: 'exact' })
+        .limit(10000);
 
       const taxMap = new Map<string, number>();
       const dbdMap = new Map<number, number>();
@@ -72,7 +88,7 @@ export default function DBDLeadsPage() {
 
       setExistingTaxIds(taxMap);
       setExistingDbdIds(dbdMap);
-      setStats((prev) => ({ ...prev, inCrm: (data || []).length }));
+      setStats((prev) => ({ ...prev, inCrm: count || (data || []).length }));
     } catch (err) {
       console.error('Error fetching existing customers:', err);
     }
@@ -96,7 +112,7 @@ export default function DBDLeadsPage() {
         .from('dbd_companies')
         .select('*', { count: 'exact', head: true })
         .eq('province', 'สมุทรปราการ')
-        .ilike('google_maps_url', '%place_id%');
+        .eq('pin_type', 'GOOGLE_BUSINESS');
 
       const totalF = factoryCount || 0;
       const gCount = googleCount || 0;
@@ -136,9 +152,9 @@ export default function DBDLeadsPage() {
       }
 
       if (selectedPinType === 'GOOGLE_BUSINESS') {
-        query = query.ilike('google_maps_url', '%place_id%');
+        query = query.eq('pin_type', 'GOOGLE_BUSINESS');
       } else if (selectedPinType === 'DBD_ADDRESS') {
-        query = query.not('latitude', 'is', null).not('google_maps_url', 'ilike', '%place_id%');
+        query = query.eq('pin_type', 'DBD_ADDRESS');
       }
 
       if (searchQuery.trim()) {
@@ -207,6 +223,7 @@ export default function DBDLeadsPage() {
         registered_capital: company.registered_capital || null,
         registered_name: company.name,
         place_id: isGoogleBusiness ? company.place_id : null,
+        pin_type: isGoogleBusiness ? 'GOOGLE_BUSINESS' : 'DBD_ADDRESS',
         notes: isGoogleBusiness
           ? '📍 หมุดสถานที่จริง (Google Business Profile)'
           : '📍 พิกัดแปลงจากที่อยู่ DBD (ยังไม่ได้ปักหมุดธุรกิจ Google)'
@@ -240,6 +257,12 @@ export default function DBDLeadsPage() {
     }
   };
 
+  const handleCopyTaxId = (taxId: string) => {
+    navigator.clipboard.writeText(taxId);
+    setCopiedTaxId(true);
+    setTimeout(() => setCopiedTaxId(false), 2000);
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const districts = [
@@ -253,40 +276,40 @@ export default function DBDLeadsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20 sm:pb-8">
+    <div className="min-h-screen bg-slate-50/70 flex flex-col pb-20 sm:pb-8">
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         {/* Header Title & Live Stats */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
-            <div className="flex items-center space-x-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-                <Building2 className="w-5 h-5" />
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+                <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                  คลังข้อมูลโรงงาน DBD (Leads Finder)
-                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  คลังข้อมูลโรงงาน DBD
+                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
                     จ.สมุทรปราการ
                   </span>
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  ค้นหาโรงงานอุตสาหกรรมที่จดทะเบียนถูกต้อง พร้อมจำแนกประเภทหมุด และดึงเข้าแผนที่เซลส์ในคลิกเดียว
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-medium">
+                  ค้นหาโรงงานนิติบุคคล คลิกดูรายละเอียดครบถ้วน และกดดึงเข้าแผนที่เซลส์ได้ในคลิกเดียว
                 </p>
               </div>
             </div>
           </div>
 
           {/* Quick Metrics Bar with Pin Type Distribution */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="px-3 py-1.5 border-r border-slate-100">
               <div className="text-[11px] font-semibold text-slate-400">โรงงานสมุทรปราการ</div>
-              <div className="text-base sm:text-lg font-black text-slate-800">{stats.totalFactories.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
+              <div className="text-base sm:text-lg font-black text-slate-900">{stats.totalFactories.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
             </div>
             <div className="px-3 py-1.5 border-r border-slate-100">
               <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>หมุดธุรกิจ Google</span>
               </div>
               <div className="text-base sm:text-lg font-black text-emerald-700">{stats.googleBusinessCount.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
@@ -306,7 +329,7 @@ export default function DBDLeadsPage() {
         </div>
 
         {/* Filter Controls Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* 1. Search Box */}
             <div className="relative">
@@ -319,7 +342,7 @@ export default function DBDLeadsPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               />
             </div>
 
@@ -331,7 +354,7 @@ export default function DBDLeadsPage() {
                   setSelectedDistrict(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all cursor-pointer"
               >
                 <option value="ALL">📍 ทุกอำเภอในสมุทรปราการ</option>
                 {districts.filter(d => d !== 'ALL').map((d) => (
@@ -350,7 +373,7 @@ export default function DBDLeadsPage() {
                   setSelectedCapital(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all cursor-pointer"
               >
                 <option value="ALL">💰 ทุกขนาดทุนจดทะเบียน</option>
                 <option value="1000000">ทุน ≥ 1 ล้านบาท</option>
@@ -369,7 +392,7 @@ export default function DBDLeadsPage() {
                   setSelectedPinType(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all cursor-pointer"
               >
                 <option value="ALL">🏷️ ป้ายกำกับหมุดทั้งหมด</option>
                 <option value="GOOGLE_BUSINESS">🟢 เฉพาะธุรกิจลงทะเบียน Google ({stats.googleBusinessCount.toLocaleString()} แห่ง)</option>
@@ -381,20 +404,20 @@ export default function DBDLeadsPage() {
           {/* Quick Active Filter Pills */}
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
             <div className="flex items-center space-x-2 text-slate-500">
-              <span>พบทั้งหมด <strong className="text-slate-900">{totalCount.toLocaleString()}</strong> โรงงาน</span>
+              <span>พบทั้งหมด <strong className="text-slate-900 font-bold">{totalCount.toLocaleString()}</strong> โรงงาน</span>
               {selectedDistrict !== 'ALL' && (
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200/60">
                   อ.{selectedDistrict}
                 </span>
               )}
               {selectedPinType === 'GOOGLE_BUSINESS' && (
-                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium flex items-center gap-1">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   หมุดธุรกิจ Google
                 </span>
               )}
               {selectedPinType === 'DBD_ADDRESS' && (
-                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium flex items-center gap-1">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200/60 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                   พิกัดที่อยู่ DBD
                 </span>
@@ -407,7 +430,7 @@ export default function DBDLeadsPage() {
                 fetchExistingCustomers();
                 fetchStats();
               }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors font-medium"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors font-semibold"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>รีเฟรชข้อมูล</span>
@@ -416,16 +439,16 @@ export default function DBDLeadsPage() {
         </div>
 
         {/* Results List / Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center space-y-3">
+            <div className="py-24 flex flex-col items-center justify-center space-y-3">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-sm font-medium text-slate-500">กำลังโหลดข้อมูลโรงงาน DBD...</p>
+              <p className="text-sm font-semibold text-slate-500">กำลังโหลดข้อมูลโรงงาน DBD...</p>
             </div>
           ) : companies.length === 0 ? (
-            <div className="py-16 text-center">
+            <div className="py-20 text-center">
               <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-600 font-bold text-base">ไม่พบข้อมูลโรงงานตามเงื่อนไขที่ค้นหา</p>
+              <p className="text-slate-700 font-bold text-base">ไม่พบข้อมูลโรงงานตามเงื่อนไขที่ค้นหา</p>
               <p className="text-xs text-slate-400 mt-1">ลองเปลี่ยนคำค้นหา หรือเลือกอำเภออื่น</p>
             </div>
           ) : (
@@ -434,44 +457,49 @@ export default function DBDLeadsPage() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="py-3 px-4">ชื่อโรงงาน / นิติบุคคล</th>
-                      <th className="py-3 px-4">ประเภทหมุด (ป้ายกำกับ)</th>
-                      <th className="py-3 px-4">ที่ตั้ง / อำเภอ</th>
-                      <th className="py-3 px-4 text-right">ทุนจดทะเบียน</th>
-                      <th className="py-3 px-4">หมวดสินค้า / วัตถุประสงค์</th>
-                      <th className="py-3 px-4 text-center">พิกัด & ติดต่อ</th>
-                      <th className="py-3 px-4 text-center">การจัดการ</th>
+                    <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="py-3.5 px-4 w-72">ชื่อโรงงาน / นิติบุคคล</th>
+                      <th className="py-3.5 px-4 w-44">ประเภทหมุด (ป้ายกำกับ)</th>
+                      <th className="py-3.5 px-4">ที่ตั้ง / อำเภอ</th>
+                      <th className="py-3.5 px-4 text-right w-32">ทุนจดทะเบียน</th>
+                      <th className="py-3.5 px-4 max-w-xs">หมวดสินค้า / วัตถุประสงค์</th>
+                      <th className="py-3.5 px-4 text-center w-28">พิกัด & ติดต่อ</th>
+                      <th className="py-3.5 px-4 text-center w-40">การจัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {companies.map((c) => {
                       const inCrm = (c.tax_id && existingTaxIds.has(c.tax_id)) || existingDbdIds.has(c.id);
+                      const customerId = (c.tax_id && existingTaxIds.get(c.tax_id)) || existingDbdIds.get(c.id);
                       const isImporting = importingId === c.id;
                       const isSuccess = importSuccessId === c.id;
                       const isGoogleBusiness = isGoogleBusinessProfile(c);
 
                       return (
-                        <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
+                        <tr
+                          key={c.id}
+                          className="hover:bg-blue-50/40 transition-colors group cursor-pointer"
+                          onClick={() => {
+                            setSelectedCompany(c);
+                            setIsDetailModalOpen(true);
+                          }}
+                        >
                           {/* Company Name & Tax ID */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900 text-sm">{c.name}</div>
-                            <div className="flex items-center space-x-2 mt-1">
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                              <span>{c.name}</span>
+                              <Eye className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                            </div>
+                            <div className="flex items-center space-x-2 mt-1.5">
                               {c.tax_id ? (
-                                <a
-                                  href={getDbdSearchUrl(c.tax_id)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center space-x-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline"
-                                >
-                                  <span>เลขทะเบียน: {c.tax_id}</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
+                                <span className="inline-flex items-center space-x-1 text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                                  <span>{c.tax_id}</span>
+                                </span>
                               ) : (
                                 <span className="text-slate-400 text-[11px]">ไม่ระบุเลขทะเบียน</span>
                               )}
                               {c.tsic_code && (
-                                <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200/60">
                                   TSIC {c.tsic_code}
                                 </span>
                               )}
@@ -479,14 +507,14 @@ export default function DBDLeadsPage() {
                           </td>
 
                           {/* Pin Type Badge */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
+                          <td className="py-4 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             {isGoogleBusiness ? (
-                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 <span>🟢 ธุรกิจลงทะเบียน Google</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs">
                                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                                 <span>📍 พิกัดที่อยู่ DBD</span>
                               </span>
@@ -494,23 +522,23 @@ export default function DBDLeadsPage() {
                           </td>
 
                           {/* Location */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-semibold text-slate-800">
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-slate-800">
                               อ.{c.district || '-'} {c.subdistrict ? `ต.${c.subdistrict}` : ''}
                             </div>
-                            <div className="text-slate-500 text-[11px] truncate max-w-xs" title={c.address || ''}>
+                            <div className="text-slate-500 text-[11px] truncate max-w-xs mt-0.5" title={c.address || ''}>
                               {c.address || '-'}
                             </div>
                           </td>
 
                           {/* Capital */}
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-4 px-4 text-right">
                             {c.registered_capital ? (
                               <div>
                                 <span className="font-black text-slate-900 text-sm">
                                   {(c.registered_capital / 1000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                 </span>
-                                <span className="text-[10px] text-slate-500 ml-1">ล้านบาท</span>
+                                <span className="text-[10px] font-bold text-slate-500 ml-1">ล้านบาท</span>
                               </div>
                             ) : (
                               <span className="text-slate-400">-</span>
@@ -518,31 +546,31 @@ export default function DBDLeadsPage() {
                           </td>
 
                           {/* Objective */}
-                          <td className="py-3.5 px-4 max-w-xs">
-                            <div className="line-clamp-2 text-slate-600 text-[11px]" title={c.objective || ''}>
+                          <td className="py-4 px-4 max-w-xs">
+                            <div className="line-clamp-2 text-slate-600 text-[11px] leading-relaxed" title={c.objective || ''}>
                               {c.objective || c.industry_group || '-'}
                             </div>
                           </td>
 
                           {/* Pin & Contact */}
-                          <td className="py-3.5 px-4 text-center">
+                          <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center space-x-1.5">
                               {c.latitude && c.longitude ? (
                                 <a
                                   href={c.google_maps_url || `https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className={`p-1.5 rounded-lg transition-colors ${
+                                  className={`p-1.5 rounded-xl transition-all shadow-2xs ${
                                     isGoogleBusiness
-                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:scale-105 border border-emerald-200/60'
+                                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100 hover:scale-105 border border-amber-200/60'
                                   }`}
                                   title={`ดูพิกัด Google Maps (${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)})`}
                                 >
                                   <MapPin className="w-4 h-4" />
                                 </a>
                               ) : (
-                                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-400" title="กำลังรอประมวลผลพิกัด">
+                                <span className="p-1.5 rounded-xl bg-slate-100 text-slate-400" title="กำลังรอประมวลผลพิกัด">
                                   <MapPin className="w-4 h-4" />
                                 </span>
                               )}
@@ -550,7 +578,7 @@ export default function DBDLeadsPage() {
                               {c.phone ? (
                                 <a
                                   href={`tel:${c.phone}`}
-                                  className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                                  className="p-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 hover:scale-105 transition-all border border-blue-200/60 shadow-2xs"
                                   title={`โทร: ${c.phone}`}
                                 >
                                   <Phone className="w-4 h-4" />
@@ -562,7 +590,7 @@ export default function DBDLeadsPage() {
                                   href={c.website.startsWith('http') ? c.website : `https://${c.website}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="p-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                  className="p-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:scale-105 transition-all border border-indigo-200/60 shadow-2xs"
                                   title={c.website}
                                 >
                                   <Globe className="w-4 h-4" />
@@ -572,7 +600,7 @@ export default function DBDLeadsPage() {
                           </td>
 
                           {/* Action Button */}
-                          <td className="py-3.5 px-4 text-center">
+                          <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                             {inCrm ? (
                               <Link
                                 href="/customers"
@@ -585,7 +613,7 @@ export default function DBDLeadsPage() {
                               <button
                                 onClick={() => handleImportToCrm(c)}
                                 disabled={isImporting}
-                                className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                                className={`inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
                                   isSuccess
                                     ? 'bg-emerald-600 text-white'
                                     : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 hover:scale-102 active:scale-98'
@@ -594,7 +622,7 @@ export default function DBDLeadsPage() {
                                 {isImporting ? (
                                   <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>กำลังบันทึก...</span>
+                                    <span>กำลังดึง...</span>
                                   </>
                                 ) : isSuccess ? (
                                   <>
@@ -626,11 +654,20 @@ export default function DBDLeadsPage() {
                   const isGoogleBusiness = isGoogleBusinessProfile(c);
 
                   return (
-                    <div key={c.id} className="p-4 space-y-2.5">
+                    <div
+                      key={c.id}
+                      className="p-4 space-y-3 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                      onClick={() => {
+                        setSelectedCompany(c);
+                        setIsDetailModalOpen(true);
+                      }}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                            <h3 className="font-bold text-slate-900 text-sm">{c.name}</h3>
+                            <h3 className="font-bold text-slate-900 text-sm leading-snug">{c.name}</h3>
+                          </div>
+                          <div className="flex items-center space-x-1.5">
                             {isGoogleBusiness ? (
                               <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 🟢 Google Business
@@ -640,25 +677,19 @@ export default function DBDLeadsPage() {
                                 📍 ที่อยู่ DBD
                               </span>
                             )}
+                            {c.tax_id && (
+                              <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                                {c.tax_id}
+                              </span>
+                            )}
                           </div>
-                          {c.tax_id && (
-                            <a
-                              href={getDbdSearchUrl(c.tax_id)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center space-x-1 text-[11px] text-blue-600 mt-0.5"
-                            >
-                              <span>เลขนิติบุคคล: {c.tax_id}</span>
-                              <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
-                          )}
                         </div>
                         {c.registered_capital && (
                           <div className="text-right shrink-0">
-                            <span className="font-extrabold text-slate-900 text-sm">
+                            <span className="font-black text-slate-900 text-sm">
                               {(c.registered_capital / 1000000).toLocaleString(undefined, { maximumFractionDigits: 1 })}M
                             </span>
-                            <span className="text-[10px] text-slate-400 block">บาท</span>
+                            <span className="text-[10px] font-bold text-slate-400 block">บาท</span>
                           </div>
                         )}
                       </div>
@@ -668,12 +699,12 @@ export default function DBDLeadsPage() {
                       </div>
 
                       {c.objective && (
-                        <div className="text-[11px] text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded-lg">
+                        <div className="text-[11px] text-slate-600 line-clamp-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           🏭 {c.objective}
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center space-x-2">
                           {c.latitude && c.longitude && (
                             <a
@@ -702,7 +733,7 @@ export default function DBDLeadsPage() {
                         {inCrm ? (
                           <Link
                             href="/customers"
-                            className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center space-x-1"
+                            className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center space-x-1"
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             <span>อยู่ใน CRM</span>
@@ -734,8 +765,8 @@ export default function DBDLeadsPage() {
               {/* Pagination Controls */}
               <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
                 <div>
-                  หน้า <strong className="text-slate-900">{currentPage}</strong> จากทั้งหมด{' '}
-                  <strong className="text-slate-900">{totalPages || 1}</strong> หน้า ({totalCount.toLocaleString()} รายการ)
+                  หน้า <strong className="text-slate-900 font-bold">{currentPage}</strong> จากทั้งหมด{' '}
+                  <strong className="text-slate-900 font-bold">{totalPages || 1}</strong> หน้า ({totalCount.toLocaleString()} รายการ)
                 </div>
 
                 <div className="flex items-center space-x-1.5">
@@ -747,7 +778,7 @@ export default function DBDLeadsPage() {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
-                  <div className="px-3 py-1.5 bg-slate-100 rounded-xl font-bold text-slate-800">
+                  <div className="px-3.5 py-1.5 bg-slate-100 rounded-xl font-bold text-slate-800">
                     {currentPage} / {totalPages || 1}
                   </div>
 
@@ -764,6 +795,242 @@ export default function DBDLeadsPage() {
           )}
         </div>
       </main>
+
+      {/* ========================================================================= */}
+      {/* 🏢 DBD Company Detail Modal (หน้าต่างแสดงรายละเอียดโรงงาน DBD) */}
+      {/* ========================================================================= */}
+      {isDetailModalOpen && selectedCompany && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden pt-3 pb-1 flex justify-center bg-slate-50/90">
+              <div className="w-10 h-1 bg-slate-300 rounded-full" />
+            </div>
+
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-slate-50/80">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1.5 pr-4">
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                      🏛️ กรมพัฒนาธุรกิจการค้า (DBD)
+                    </span>
+                    {isGoogleBusinessProfile(selectedCompany) ? (
+                      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>🟢 ธุรกิจลงทะเบียน Google</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        <span>📍 พิกัดที่อยู่ DBD</span>
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 leading-snug">
+                    {selectedCompany.name}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-200/60 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-5 text-xs sm:text-sm">
+              {/* 1. Legal & Registration Card */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-3">
+                <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <span>ข้อมูลการจดทะเบียนนิติบุคคล</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Tax ID */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/60">
+                    <div className="text-[11px] font-semibold text-slate-400">เลขนิติบุคคล / Tax ID</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="font-mono font-bold text-slate-900 text-sm">
+                        {selectedCompany.tax_id || '-'}
+                      </span>
+                      {selectedCompany.tax_id && (
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleCopyTaxId(selectedCompany.tax_id!)}
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors"
+                            title="คัดลอกเลขทะเบียน"
+                          >
+                            {copiedTaxId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                          <a
+                            href={getDbdSearchUrl(selectedCompany)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="เปิดดูบน DBD DataWarehouse"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Registered Capital */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/60">
+                    <div className="text-[11px] font-semibold text-slate-400">ทุนจดทะเบียน</div>
+                    <div className="mt-1">
+                      <span className="font-black text-slate-900 text-base">
+                        {selectedCompany.registered_capital
+                          ? (selectedCompany.registered_capital).toLocaleString()
+                          : '-'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500 ml-1">บาท</span>
+                    </div>
+                  </div>
+
+                  {/* TSIC Code */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/60">
+                    <div className="text-[11px] font-semibold text-slate-400">รหัส TSIC (หมวดหมู่ธุรกิจ)</div>
+                    <div className="mt-1 font-bold text-indigo-700">
+                      {selectedCompany.tsic_code ? `TSIC ${selectedCompany.tsic_code}` : '-'}
+                      <span className="text-slate-600 font-normal ml-1.5">
+                        ({selectedCompany.industry_group || 'การผลิต'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Registered Date */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/60">
+                    <div className="text-[11px] font-semibold text-slate-400">วันที่จดทะเบียนจัดตั้ง</div>
+                    <div className="mt-1 font-bold text-slate-800">
+                      {selectedCompany.registered_date || (selectedCompany.batch_year ? `ปี พ.ศ. ${selectedCompany.batch_year}` : '-')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Objective Description */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200/60">
+                  <div className="text-[11px] font-semibold text-slate-400 mb-1">วัตถุประสงค์ / สินค้าที่ผลิต</div>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                    {selectedCompany.objective || selectedCompany.industry_group || 'ไม่ระบุรายละเอียดวัตถุประสงค์'}
+                  </p>
+                </div>
+              </div>
+
+              {/* 2. Location & Map Information */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-3">
+                <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-emerald-600" />
+                  <span>ที่ตั้งโรงงาน & ข้อมูลพิกัดแผนที่</span>
+                </h3>
+
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200/60 space-y-2">
+                  <div className="text-xs text-slate-700 leading-relaxed">
+                    <strong>ที่อยู่จดทะเบียน:</strong> {selectedCompany.address || '-'} ต.{selectedCompany.subdistrict || '-'} อ.{selectedCompany.district || '-'} จ.{selectedCompany.province || 'สมุทรปราการ'} {selectedCompany.zipcode || ''}
+                  </div>
+
+                  {selectedCompany.latitude && selectedCompany.longitude ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                      <div className="font-mono text-xs text-slate-500">
+                        พิกัด GPS: {selectedCompany.latitude.toFixed(6)}, {selectedCompany.longitude.toFixed(6)}
+                      </div>
+                      <a
+                        href={selectedCompany.google_maps_url || `https://www.google.com/maps?q=${selectedCompany.latitude},${selectedCompany.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-xs"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>เปิดนำทางใน Google Maps</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400 italic">ยังไม่มีข้อมูลพิกัด GPS</div>
+                  )}
+                </div>
+
+                {/* Contact Phone & Website if available */}
+                {(selectedCompany.phone || selectedCompany.website) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {selectedCompany.phone && (
+                      <a
+                        href={`tel:${selectedCompany.phone}`}
+                        className="flex items-center space-x-2 p-3 rounded-xl bg-white border border-slate-200/60 text-blue-700 font-bold hover:bg-blue-50 transition-colors"
+                      >
+                        <Phone className="w-4 h-4 text-blue-600" />
+                        <span>{selectedCompany.phone}</span>
+                      </a>
+                    )}
+                    {selectedCompany.website && (
+                      <a
+                        href={selectedCompany.website.startsWith('http') ? selectedCompany.website : `https://${selectedCompany.website}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center space-x-2 p-3 rounded-xl bg-white border border-slate-200/60 text-indigo-700 font-bold hover:bg-indigo-50 transition-colors truncate"
+                      >
+                        <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span className="truncate">{selectedCompany.website}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/90 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <a
+                href={getDbdSearchUrl(selectedCompany)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center space-x-1.5 text-xs text-slate-600 hover:text-blue-700 font-bold"
+              >
+                <span>🏛️ ตรวจสอบงบการเงินบน DBD DataWarehouse+</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <div>
+                {(selectedCompany.tax_id && existingTaxIds.has(selectedCompany.tax_id)) || existingDbdIds.has(selectedCompany.id) ? (
+                  <Link
+                    href="/customers"
+                    className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs sm:text-sm hover:bg-emerald-100 transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>โรงงานนี้อยู่ใน Sales CRM แล้ว (คลิกดู)</span>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      await handleImportToCrm(selectedCompany);
+                      setIsDetailModalOpen(false);
+                    }}
+                    disabled={importingId === selectedCompany.id}
+                    className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all hover:scale-102 active:scale-98"
+                  >
+                    {importingId === selectedCompany.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>กำลังบันทึกเข้า CRM...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        <span>ดึงเข้าแผนที่ Smart Map ทันที</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
