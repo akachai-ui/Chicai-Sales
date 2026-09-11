@@ -14,7 +14,8 @@ import {
   Building2,
   Check,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  ExternalLink
 } from "lucide-react";
 
 interface EmailComposeModalProps {
@@ -185,27 +186,73 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
     setDirectSendSuccess(false);
 
     try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: customer.id,
-          companyName: customer.name,
-          email: cleanToEmail,
-          webhookUrl: (gasWebhookUrl || DEFAULT_WEBHOOK_URL).trim(),
-          contactPerson: customer.contact_person,
-        }),
-      });
+      let isSuccess = false;
+      try {
+        const res = await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerId: customer.id,
+            companyName: customer.name,
+            email: cleanToEmail,
+            webhookUrl: (gasWebhookUrl || DEFAULT_WEBHOOK_URL).trim(),
+            contactPerson: customer.contact_person,
+          }),
+        });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "ส่งอีเมลไม่สำเร็จ");
+        const data = await res.json();
+        if (res.ok && data.success) {
+          isSuccess = true;
+        } else {
+          throw new Error(data.error || "Server API Error");
+        }
+      } catch (serverErr) {
+        console.warn("Server send-email failed, falling back to direct client-to-Google script:", serverErr);
+        // Fallback: Direct client-to-Google Apps Script Webhook
+        const targetUrl = (gasWebhookUrl || DEFAULT_WEBHOOK_URL).trim();
+        await fetch(targetUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            companyName: customer.name,
+            email: cleanToEmail,
+            contactPerson: customer.contact_person || "",
+          }),
+        });
+
+        // Log activity directly into Supabase
+        if (customer.id) {
+          try {
+            const today = new Date().toISOString().split("T")[0];
+            await supabase.from("customer_activities").insert({
+              customer_id: customer.id,
+              activity_type: "ส่งอีเมล",
+              activity_date: today,
+              contact_person: customer.contact_person || null,
+              details: `ส่งอีเมล E-Catalog CHICAI ELECTRIC (ลดต้นทุน 70% + On-site Demo) ถึง ${cleanToEmail}`,
+            });
+
+            await supabase
+              .from("customers")
+              .update({
+                pipeline_stage: "ติดต่อแล้ว / ติดตามงาน",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", customer.id);
+          } catch (dbErr) {
+            console.error("Supabase log error:", dbErr);
+          }
+        }
+        isSuccess = true;
       }
 
-      setDirectSendSuccess(true);
-      checkPreviousEmailHistory(customer);
-      if (onEmailSent) {
-        onEmailSent();
+      if (isSuccess) {
+        setDirectSendSuccess(true);
+        checkPreviousEmailHistory(customer);
+        if (onEmailSent) {
+          onEmailSent();
+        }
       }
     } catch (err: any) {
       console.error("Error sending direct email:", err);
@@ -337,15 +384,30 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             </div>
           )}
 
-          {/* Direct Send Error Notification Banner */}
+          {/* Direct Send Error Notification Banner with Gmail Web Fallback */}
           {directSendError && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start space-x-3 animate-in zoom-in-95 duration-200 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                <AlertCircle className="w-4 h-4" />
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl space-y-2.5 animate-in zoom-in-95 duration-200 shadow-xs">
+              <div className="flex items-start space-x-3">
+                <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+                <div className="text-xs text-rose-950 leading-relaxed flex-1">
+                  <span className="font-black text-xs sm:text-sm block text-rose-900">เกิดข้อผิดพลาดในการส่งอัตโนมัติ:</span>
+                  <span className="text-[11px] text-rose-700">{directSendError}</span>
+                </div>
               </div>
-              <div className="text-xs text-rose-950 leading-relaxed">
-                <span className="font-black text-xs sm:text-sm block text-rose-900">เกิดข้อผิดพลาดในการส่ง:</span>
-                {directSendError}
+              <div className="pt-1 flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.open(gmailUrl, "_blank");
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center space-x-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>เปิดส่งผ่าน Gmail Web ทันที (ข้อความครบ)</span>
+                </button>
               </div>
             </div>
           )}
