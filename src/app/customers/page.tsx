@@ -45,6 +45,7 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   const [selectedStage, setSelectedStage] = useState('ALL');
+  const [onlyWithEmail, setOnlyWithEmail] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
 
@@ -125,6 +126,7 @@ export default function CustomersPage() {
     return customers.filter((c) => {
       if (selectedDistrict !== 'ALL' && c.district !== selectedDistrict) return false;
       if (selectedStage !== 'ALL' && c.pipeline_stage !== selectedStage) return false;
+      if (onlyWithEmail && (!c.email || !c.email.trim())) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = c.name.toLowerCase().includes(q);
@@ -137,7 +139,7 @@ export default function CustomersPage() {
       }
       return true;
     });
-  }, [customers, selectedDistrict, selectedStage, searchQuery]);
+  }, [customers, selectedDistrict, selectedStage, onlyWithEmail, searchQuery]);
 
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
   const paginatedCustomers = useMemo(() => {
@@ -338,6 +340,19 @@ export default function CustomersPage() {
                   สถานะ: {selectedStage}
                 </span>
               )}
+              <button
+                onClick={() => {
+                  setOnlyWithEmail(!onlyWithEmail);
+                  setCurrentPage(1);
+                }}
+                className={`px-2.5 py-0.5 rounded-full font-bold border transition-all flex items-center space-x-1 touch-press ${
+                  onlyWithEmail
+                    ? 'bg-purple-600 text-white border-purple-600 ring-2 ring-purple-300'
+                    : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                }`}
+              >
+                <span>✉️ มีอีเมล ({stats.withEmail})</span>
+              </button>
             </div>
 
             <div className="flex items-center space-x-2">

@@ -251,7 +251,7 @@ export default function CustomerMapInner({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
-  const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED'>('ALL');
+  const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
   const [showZones, setShowZones] = useState(true);
 
   // Drawer
@@ -385,18 +385,20 @@ function normalizeDistrictName(raw?: string | null): string {
   return s;
 }
 
-  // Summary counts of contacted vs uncontacted
+  // Summary counts of contacted vs uncontacted and with email
   const statsSummary = useMemo(() => {
     let contacted = 0;
     let uncontacted = 0;
+    let withEmail = 0;
     unifiedFactories.forEach((f) => {
+      if (f.email && f.email.trim()) withEmail++;
       const hasContact =
         (f.activities_count !== undefined && f.activities_count > 0) ||
         (f.pipeline_stage && f.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
       if (hasContact) contacted++;
       else uncontacted++;
     });
-    return { contacted, uncontacted, total: unifiedFactories.length };
+    return { contacted, uncontacted, withEmail, total: unifiedFactories.length };
   }, [unifiedFactories]);
 
   // Generate District Zones automatically from all unified points
@@ -427,14 +429,16 @@ function normalizeDistrictName(raw?: string | null): string {
 
       if (contactFilter === 'CONTACTED' && !hasContact) return false;
       if (contactFilter === 'UNCONTACTED' && hasContact) return false;
+      if (contactFilter === 'WITH_EMAIL' && (!f.email || !f.email.trim())) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = f.name.toLowerCase().includes(q);
         const matchPhone = f.phone && f.phone.toLowerCase().includes(q);
+        const matchEmail = f.email && f.email.toLowerCase().includes(q);
         const matchType = f.business_type && f.business_type.toLowerCase().includes(q);
         const matchAddr = f.address && f.address.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchType && !matchAddr) return false;
+        if (!matchName && !matchPhone && !matchEmail && !matchType && !matchAddr) return false;
       }
       return true;
     });
@@ -1046,6 +1050,20 @@ function normalizeDistrictName(raw?: string | null): string {
                   {statsSummary.uncontacted}
                 </span>
               </button>
+              <button
+                onClick={() => setContactFilter(contactFilter === 'WITH_EMAIL' ? 'ALL' : 'WITH_EMAIL')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'WITH_EMAIL'
+                    ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-400'
+                    : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60'
+                }`}
+                title="แสดงเฉพาะโรงงานที่มีอีเมลติดต่อ"
+              >
+                <span>✉️ มีอีเมล</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${contactFilter === 'WITH_EMAIL' ? 'bg-white/30 text-white' : 'bg-purple-200/60 text-purple-900'}`}>
+                  {statsSummary.withEmail}
+                </span>
+              </button>
             </div>
 
             {/* District Filter Dropdown (Desktop) */}
@@ -1277,6 +1295,17 @@ function normalizeDistrictName(raw?: string | null): string {
               <span className="w-2 h-2 rounded-full bg-blue-500" />
               <span>ยังไม่ได้ติดต่อ ({statsSummary.uncontacted})</span>
             </button>
+            <button
+              onClick={() => setContactFilter(contactFilter === 'WITH_EMAIL' ? 'ALL' : 'WITH_EMAIL')}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
+                contactFilter === 'WITH_EMAIL'
+                  ? 'bg-purple-600 text-white border-purple-600 ring-2 ring-purple-400'
+                  : 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>เฉพาะมีอีเมล ({statsSummary.withEmail})</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1291,14 +1320,26 @@ function normalizeDistrictName(raw?: string | null): string {
 
           {/* Drawer Header */}
           <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-            <div>
+            <div className="space-y-1.5">
               <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-1.5">
                 <span>รายชื่อโรงงานในพื้นที่</span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
                   {filteredFactories.length}
                 </span>
               </h3>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">แตะเพื่อดูตำแหน่งบนแผนที่</p>
+              <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                <button
+                  onClick={() => setContactFilter(contactFilter === 'WITH_EMAIL' ? 'ALL' : 'WITH_EMAIL')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all flex items-center space-x-1 touch-press ${
+                    contactFilter === 'WITH_EMAIL'
+                      ? 'bg-purple-600 text-white border-purple-600 ring-2 ring-purple-300'
+                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                  }`}
+                >
+                  <Mail className="w-3 h-3" />
+                  <span>{contactFilter === 'WITH_EMAIL' ? '✓ กำลังแสดงเฉพาะมีเมล' : `เฉพาะมีเมล (${statsSummary.withEmail})`}</span>
+                </button>
+              </div>
             </div>
             <button
               onClick={() => setShowDrawer(false)}
@@ -1392,8 +1433,10 @@ function normalizeDistrictName(raw?: string | null): string {
                           </div>
                         )}
                         {fact.email && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500 font-medium truncate max-w-[180px]">✉️ {fact.email}</span>
+                          <div className="flex items-center justify-between bg-purple-50/70 p-1.5 rounded-lg border border-purple-100">
+                            <span className="text-purple-800 font-bold truncate max-w-[170px] text-[11px]">
+                              ✉️ {fact.email}
+                            </span>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1401,9 +1444,9 @@ function normalizeDistrictName(raw?: string | null): string {
                                 setEmailCustomer(getCustomerFromFactory(fact));
                                 setIsEmailModalOpen(true);
                               }}
-                              className="text-blue-600 font-semibold hover:underline shrink-0"
+                              className="px-2 py-0.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] shadow-2xs transition-colors shrink-0"
                             >
-                              ส่งอีเมล / Gmail
+                              ส่งอีเมล
                             </button>
                           </div>
                         )}
