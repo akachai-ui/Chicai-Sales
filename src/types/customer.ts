@@ -102,6 +102,7 @@ export interface DBDCompany {
   longitude: number | null;
   phone: string | null;
   website: string | null;
+  email?: string | null;
   google_maps_url: string | null;
   place_id: string | null;
   pin_type?: 'GOOGLE_BUSINESS' | 'DBD_ADDRESS' | string | null;

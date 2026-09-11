@@ -365,7 +365,7 @@ export default function CustomerMapInner({
         contact_person: null,
         target_product: null,
         notes: null,
-        email: null,
+        email: d.email || null,
         tax_id: d.tax_id,
         registered_capital: d.registered_capital,
         objective: d.objective,
@@ -1178,7 +1178,7 @@ function normalizeDistrictName(raw?: string | null): string {
             </div>
 
             {/* Quick Action Buttons */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-100">
+            <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
               {selectedFactory.phone ? (
                 <a
                   href={`tel:${selectedFactory.phone.replace(/\s+/g, '')}`}
@@ -1194,6 +1194,22 @@ function normalizeDistrictName(raw?: string | null): string {
                 </div>
               )}
 
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailCustomer(getCustomerFromFactory(selectedFactory));
+                  setIsEmailModalOpen(true);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
+                  selectedFactory.email
+                    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200'
+                }`}
+              >
+                <Mail className={`w-3.5 h-3.5 mb-0.5 ${selectedFactory.email ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span>{selectedFactory.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+              </button>
+
               {selectedFactory.latitude && selectedFactory.longitude ? (
                 <a
                   href={selectedFactory.google_maps_url || `https://www.google.com/maps?q=${selectedFactory.latitude},${selectedFactory.longitude}`}
@@ -1206,6 +1222,7 @@ function normalizeDistrictName(raw?: string | null): string {
                 </a>
               ) : (
                 <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
+                  <Navigation className="w-3.5 h-3.5 mb-0.5" />
                   <span>ไม่มีพิกัด</span>
                 </div>
               )}
@@ -1360,18 +1377,36 @@ function normalizeDistrictName(raw?: string | null): string {
                       </button>
                     </div>
 
-                    {fact.phone && (
+                    {(fact.phone || fact.email) && (
                       <div className="mt-2 pt-2 border-t border-slate-100/80 space-y-1 text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 font-medium">📞 {fact.phone}</span>
-                          <a
-                            href={`tel:${fact.phone.replace(/\s+/g, '')}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-emerald-600 font-semibold hover:underline"
-                          >
-                            โทรเลย
-                          </a>
-                        </div>
+                        {fact.phone && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-medium">📞 {fact.phone}</span>
+                            <a
+                              href={`tel:${fact.phone.replace(/\s+/g, '')}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-emerald-600 font-semibold hover:underline"
+                            >
+                              โทรเลย
+                            </a>
+                          </div>
+                        )}
+                        {fact.email && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-medium truncate max-w-[180px]">✉️ {fact.email}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEmailCustomer(getCustomerFromFactory(fact));
+                                setIsEmailModalOpen(true);
+                              }}
+                              className="text-blue-600 font-semibold hover:underline shrink-0"
+                            >
+                              ส่งอีเมล / Gmail
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
