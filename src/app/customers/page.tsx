@@ -25,7 +25,17 @@ import {
   Plus,
   RefreshCw,
   SlidersHorizontal,
-  Trash2
+  Trash2,
+  Building2,
+  Users,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Compass,
+  FileSpreadsheet,
+  MessageSquare,
+  Flame,
+  Briefcase
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -57,7 +67,7 @@ export default function CustomersPage() {
       const data = await fetchAllCustomers();
       setCustomers(data || []);
     } catch (err: any) {
-      console.error('Error:', err);
+      console.error('Error fetching customers:', err);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -74,6 +84,34 @@ export default function CustomersPage() {
       unsubscribe();
     };
   }, []);
+
+  // Compute live pipeline metrics
+  const stats = useMemo(() => {
+    let uncontacted = 0;
+    let inProgress = 0;
+    let quotationWon = 0;
+    let withEmail = 0;
+
+    customers.forEach((c) => {
+      if (c.email) withEmail++;
+      const stage = c.pipeline_stage;
+      if (!stage || stage === 'ยังไม่ได้ติดต่อ') {
+        uncontacted++;
+      } else if (stage === 'ติดต่อแล้ว / ติดตามงาน' || stage === 'เข้าพบ / นำเสนอสินค้า') {
+        inProgress++;
+      } else if (stage === 'ส่งใบเสนอราคา' || stage === 'ปิดการขายสำเร็จ') {
+        quotationWon++;
+      }
+    });
+
+    return {
+      total: customers.length,
+      uncontacted,
+      inProgress,
+      quotationWon,
+      withEmail
+    };
+  }, [customers]);
 
   const districts = useMemo(() => {
     const set = new Set<string>();
@@ -94,7 +132,8 @@ export default function CustomersPage() {
         const matchEmail = c.email && c.email.toLowerCase().includes(q);
         const matchProduct = c.target_product && c.target_product.toLowerCase().includes(q);
         const matchAddress = c.address && c.address.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchEmail && !matchProduct && !matchAddress) return false;
+        const matchTax = c.tax_id && c.tax_id.toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchEmail && !matchProduct && !matchAddress && !matchTax) return false;
       }
       return true;
     });
@@ -142,47 +181,76 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20 sm:pb-8">
+    <div className="min-h-screen bg-slate-50/70 flex flex-col pb-20 sm:pb-8">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 w-full flex-1">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* Header Title & Live Stats Matching DBD Design */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">รายชื่อลูกค้า & โรงงาน</h1>
-            <p className="text-[11px] sm:text-sm text-slate-500 mt-0.5">
-              จัดการข้อมูลโรงงานทั้งหมด {customers.length} แห่ง (เพิ่ม ลบ แก้ไข ได้ทันที)
-            </p>
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  ฐานข้อมูลลูกค้า & โรงงานใน CRM
+                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+                    Sales Pipeline
+                  </span>
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-medium">
+                  จัดการรายชื่อลูกค้า บันทึกการเข้าพบ ส่งอีเมลใบเสนอราคา และติดตามสถานะงานขาย
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-                setCustomerToEdit(null);
-                setIsFormModalOpen(true);
-              }}
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-600/30 transition-all touch-press"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ เพิ่มโรงงานใหม่</span>
-            </button>
-            <Link
-              href="/map"
-              className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm shadow-blue-600/30 transition-all touch-press"
-            >
-              <MapPin className="w-4 h-4" />
-              <span>ดูบนแผนที่</span>
-            </Link>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="px-3 py-1.5 border-r border-slate-100">
+              <div className="text-[11px] font-semibold text-slate-400">ลูกค้าทั้งหมดใน CRM</div>
+              <div className="text-base sm:text-lg font-black text-slate-900">
+                {stats.total.toLocaleString()} <span className="text-xs font-normal text-slate-400">ราย</span>
+              </div>
+            </div>
+            <div className="px-3 py-1.5 border-r border-slate-100">
+              <div className="text-[11px] font-semibold text-amber-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>ยังไม่ได้ติดต่อ</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-amber-700">
+                {stats.uncontacted.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span>
+              </div>
+            </div>
+            <div className="px-3 py-1.5 border-r border-slate-100">
+              <div className="text-[11px] font-semibold text-blue-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                <span>กำลังติดตาม / เข้าพบ</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-blue-700">
+                {stats.inProgress.toLocaleString()} <span className="text-xs font-normal text-slate-400">ราย</span>
+              </div>
+            </div>
+            <div className="px-3 py-1.5">
+              <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>เสนอราคา / ปิดการขาย</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-emerald-700">
+                {stats.quotationWon.toLocaleString()} <span className="text-xs font-normal text-slate-400">ราย</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Filter Controls Bar */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-3 sm:p-4 mb-4 sm:mb-6 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-            
-            {/* Search */}
+        {/* Action & Filter Controls Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* 1. Search Box */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="ค้นหาชื่อโรงงาน, เบอร์โทร, อีเมล, สินค้า..."
@@ -191,226 +259,278 @@ export default function CustomersPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
               />
             </div>
 
-            {/* District */}
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            {/* 2. District Filter */}
+            <div>
               <select
                 value={selectedDistrict}
                 onChange={(e) => {
                   setSelectedDistrict(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all cursor-pointer"
               >
-                <option value="ALL">ทุกอำเภอ / โซน ({districts.length})</option>
+                <option value="ALL">📍 ทุกอำเภอ / โซน ({districts.length} โซน)</option>
                 {districts.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                  <option key={d} value={d}>
+                    อ. {d}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Pipeline Stage */}
-            <div className="relative">
-              <Filter className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            {/* 3. Pipeline Stage Filter */}
+            <div>
               <select
                 value={selectedStage}
                 onChange={(e) => {
                   setSelectedStage(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all cursor-pointer"
               >
-                <option value="ALL">ทุกสถานะ Pipeline</option>
+                <option value="ALL">🏷️ ทุกสถานะ Pipeline</option>
                 {PIPELINE_STAGES.map((s) => (
-                  <option key={s.stage} value={s.stage}>{s.stage}</option>
+                  <option key={s.stage} value={s.stage}>
+                    {s.stage}
+                  </option>
                 ))}
               </select>
             </div>
 
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] sm:text-xs text-slate-500">
-            <span>พบทั้งหมด <b>{filtered.length}</b> รายการ (หน้า {currentPage}/{totalPages})</span>
-            {(searchQuery || selectedDistrict !== 'ALL' || selectedStage !== 'ALL') && (
+            {/* 4. Action Buttons */}
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
-                  setSearchQuery('');
-                  setSelectedDistrict('ALL');
-                  setSelectedStage('ALL');
-                  setCurrentPage(1);
+                  setCustomerToEdit(null);
+                  setIsFormModalOpen(true);
                 }}
-                className="text-blue-600 hover:underline font-bold"
+                className="flex-1 flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all touch-press"
               >
-                ล้างตัวกรอง
+                <Plus className="w-4 h-4" />
+                <span>เพิ่มโรงงานใหม่</span>
               </button>
-            )}
+              <Link
+                href="/map"
+                className="flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-all"
+                title="เปิดดูบนแผนที่ Smart Map"
+              >
+                <Compass className="w-4 h-4 text-slate-600" />
+                <span className="hidden sm:inline">แผนที่</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick Active Filter Pills */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
+            <div className="flex items-center space-x-2 text-slate-500">
+              <span>พบทั้งหมด <strong className="text-slate-900 font-bold">{filtered.length.toLocaleString()}</strong> โรงงาน</span>
+              {selectedDistrict !== 'ALL' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
+                  อ.{selectedDistrict}
+                </span>
+              )}
+              {selectedStage !== 'ALL' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200/60">
+                  สถานะ: {selectedStage}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {(searchQuery || selectedDistrict !== 'ALL' || selectedStage !== 'ALL') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedDistrict('ALL');
+                    setSelectedStage('ALL');
+                    setCurrentPage(1);
+                  }}
+                  className="px-2.5 py-1 text-slate-500 hover:text-slate-800 font-semibold transition-colors"
+                >
+                  ล้างตัวกรอง
+                </button>
+              )}
+              <button
+                onClick={() => fetchCustomers(true)}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors font-semibold"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>รีเฟรชข้อมูล</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Table / Cards List */}
-        {loading ? (
-          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-12 text-center space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-            <p className="text-xs sm:text-sm font-semibold text-slate-600">กำลังโหลดข้อมูลลูกค้า...</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-12 text-center space-y-2">
-            <p className="text-sm sm:text-base font-bold text-slate-800">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</p>
-            <p className="text-xs text-slate-400">กรุณาลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            
-            {/* 1. Mobile Cards Feed (< md screens) */}
-            <div className="md:hidden space-y-3">
-              {paginatedCustomers.map((c) => {
-                const stageConf = getStageConfig(c.pipeline_stage);
-                return (
-                  <div
-                    key={c.id}
-                    className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
-                            #{c.seq || c.id}
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                            {c.district || 'สมุทรปราการ'}
-                          </span>
-                        </div>
-                        <h3 className="font-extrabold text-sm text-slate-900 leading-snug">
-                          {c.name}
-                        </h3>
-                        {c.address && (
-                          <p className="text-[11px] text-slate-400 line-clamp-1">
-                            {c.address}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end space-y-1 shrink-0">
-                        <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${stageConf.dot}`} />
-                          <span>{c.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span>
-                        </span>
-                        {(c.activities_count !== undefined && c.activities_count > 0) && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            ✓ {c.activities_count} กิจกรรม
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Activity Note Snippet or Target Product */}
-                    {c.latest_activity?.details ? (
-                      <div className="text-[11px] text-emerald-800 bg-emerald-50/80 p-2 rounded-xl border border-emerald-100 flex items-start space-x-1.5">
-                        <span className="shrink-0">💬</span>
-                        <span className="line-clamp-2 leading-relaxed">
-                          <b>{c.latest_activity.activity_type} ({c.latest_activity.activity_date?.split('T')[0]}):</b> {c.latest_activity.details}
-                        </span>
-                      </div>
-                    ) : c.target_product ? (
-                      <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 line-clamp-1">
-                        📦 <span className="font-medium">{c.target_product}</span>
-                      </div>
-                    ) : null}
-
-                    {/* Mobile Quick Action Buttons Toolbar */}
-                    <div className="grid grid-cols-4 gap-1.5 pt-1">
-                      {c.phone ? (
-                        <a
-                          href={`tel:${c.phone.replace(/\s+/g, '')}`}
-                          className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-bold touch-press"
-                        >
-                          <Phone className="w-3.5 h-3.5 mb-0.5 text-emerald-600" />
-                          <span>โทร</span>
-                        </a>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
-                          <Phone className="w-3.5 h-3.5 mb-0.5" />
-                          <span>ไม่มีเบอร์</span>
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEmailCustomer(c);
-                          setIsEmailModalOpen(true);
-                        }}
-                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
-                          c.email
-                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
-                            : 'bg-slate-50 text-slate-500 border border-slate-200'
-                        }`}
-                        title="ส่งอีเมล / Gmail พร้อมแม่แบบข้อความ"
-                      >
-                        <Mail className={`w-3.5 h-3.5 mb-0.5 ${c.email ? 'text-indigo-600' : 'text-slate-400'}`} />
-                        <span>{c.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
-                      </button>
-
-                      {c.google_maps_url ? (
-                        <a
-                          href={c.google_maps_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
-                          <span>นำทาง</span>
-                        </a>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
-                          <ExternalLink className="w-3.5 h-3.5 mb-0.5" />
-                          <span>ไม่มีพิกัด</span>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(c);
-                          setIsDetailModalOpen(true);
-                        }}
-                        className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-600 text-white shadow-xs text-[10px] font-bold touch-press"
-                      >
-                        <Edit className="w-3.5 h-3.5 mb-0.5" />
-                        <span>บันทึก</span>
-                      </button>
-                    </div>
-
-                    {/* DBD Quick Link */}
-                    <a
-                      href={getDbdSearchUrl(c)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
-                    >
-                      <span className="flex items-center space-x-1.5">
-                        <span>🏛️</span>
-                        <span>ดูข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน</span>
-                      </span>
-                      <ExternalLink className="w-3 h-3 text-slate-400" />
-                    </a>
-                  </div>
-                );
-              })}
+        {/* Results List / Table */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          {loading ? (
+            <div className="py-24 flex flex-col items-center justify-center space-y-3">
+              <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+              <p className="text-sm font-semibold text-slate-500">กำลังโหลดข้อมูลลูกค้า CRM...</p>
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-20 text-center space-y-3">
+              <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
+              <p className="text-base font-bold text-slate-800">ไม่พบข้อมูลลูกค้าตามเงื่อนไขที่เลือก</p>
+              <p className="text-xs text-slate-400">ลองเปลี่ยนคำค้นหา หรือกดล้างตัวกรองเพื่อดูข้อมูลทั้งหมด</p>
+            </div>
+          ) : (
+            <div>
+              {/* 1. Mobile Cards Feed (< md screens) */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {paginatedCustomers.map((c) => {
+                  const stageConf = getStageConfig(c.pipeline_stage);
+                  return (
+                    <div key={c.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                              #{c.seq || c.id}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
+                              {c.district || 'สมุทรปราการ'}
+                            </span>
+                            {c.place_id || c.pin_type === 'GOOGLE_BUSINESS' ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                🟢 Google
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                📍 DBD
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-extrabold text-sm text-slate-900 leading-snug">
+                            {c.name}
+                          </h3>
+                          {c.address && (
+                            <p className="text-[11px] text-slate-400 line-clamp-1">
+                              {c.address}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end space-y-1 shrink-0">
+                          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${stageConf.dot}`} />
+                            <span>{c.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span>
+                          </span>
+                          {(c.activities_count !== undefined && c.activities_count > 0) && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ {c.activities_count} กิจกรรม
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-            {/* 2. Desktop Table (>= md screens) */}
-            <div className="hidden md:block bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
+                      {/* Latest Activity Snippet or Target Product */}
+                      {c.latest_activity?.details ? (
+                        <div className="text-[11px] text-emerald-800 bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-100 flex items-start space-x-1.5">
+                          <span className="shrink-0">💬</span>
+                          <span className="line-clamp-2 leading-relaxed">
+                            <b>{c.latest_activity.activity_type} ({c.latest_activity.activity_date?.split('T')[0]}):</b> {c.latest_activity.details}
+                          </span>
+                        </div>
+                      ) : c.target_product ? (
+                        <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100 line-clamp-1">
+                          📦 <span className="font-medium">{c.target_product}</span>
+                        </div>
+                      ) : null}
+
+                      {/* Mobile Quick Action Buttons Toolbar */}
+                      <div className="grid grid-cols-4 gap-1.5 pt-1">
+                        {c.phone ? (
+                          <a
+                            href={`tel:${c.phone.replace(/\s+/g, '')}`}
+                            className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-[10px] font-bold touch-press"
+                          >
+                            <Phone className="w-3.5 h-3.5 mb-0.5 text-emerald-600" />
+                            <span>โทร</span>
+                          </a>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
+                            <Phone className="w-3.5 h-3.5 mb-0.5" />
+                            <span>ไม่มีเบอร์</span>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmailCustomer(c);
+                            setIsEmailModalOpen(true);
+                          }}
+                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
+                            c.email
+                              ? 'bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/80'
+                              : 'bg-slate-50 text-slate-500 border border-slate-200'
+                          }`}
+                          title="ส่งอีเมล / Gmail พร้อมแม่แบบข้อความ"
+                        >
+                          <Mail className={`w-3.5 h-3.5 mb-0.5 ${c.email ? 'text-purple-600' : 'text-slate-400'}`} />
+                          <span>{c.email ? 'ส่งอีเมล' : 'เขียนเมล'}</span>
+                        </button>
+
+                        {c.google_maps_url ? (
+                          <a
+                            href={c.google_maps_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
+                            <span>นำทาง</span>
+                          </a>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
+                            <ExternalLink className="w-3.5 h-3.5 mb-0.5" />
+                            <span>ไม่มีพิกัด</span>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setSelectedCustomer(c);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs text-[10px] font-bold touch-press"
+                        >
+                          <Edit className="w-3.5 h-3.5 mb-0.5" />
+                          <span>บันทึกงาน</span>
+                        </button>
+                      </div>
+
+                      {/* DBD Quick Link */}
+                      <a
+                        href={getDbdSearchUrl(c)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors touch-press"
+                      >
+                        <span className="flex items-center space-x-1.5">
+                          <span>🏛️</span>
+                          <span>ดูข้อมูลงบการเงิน & ทุนจดทะเบียน DBD</span>
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-slate-400" />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 2. Desktop Table (>= md screens) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/90 text-slate-500 font-semibold border-b border-slate-200">
+                  <thead className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200/80 uppercase tracking-wider text-[11px]">
                     <tr>
                       <th className="py-3.5 px-4 w-16">ลำดับ</th>
                       <th className="py-3.5 px-4">ชื่อโรงงาน / บริษัท</th>
                       <th className="py-3.5 px-4">อำเภอ/โซน</th>
-                      <th className="py-3.5 px-4">สถานะการขาย</th>
+                      <th className="py-3.5 px-4">สถานะ Pipeline</th>
                       <th className="py-3.5 px-4">เบอร์โทรศัพท์</th>
                       <th className="py-3.5 px-4">อีเมล (Email)</th>
                       <th className="py-3.5 px-4">สินค้าเป้าหมาย</th>
@@ -427,7 +547,7 @@ export default function CustomersPage() {
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                              <span className="font-bold text-slate-900 leading-snug">{c.name}</span>
+                              <span className="font-extrabold text-slate-900 leading-snug">{c.name}</span>
                               {c.place_id || c.pin_type === 'GOOGLE_BUSINESS' ? (
                                 <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="หมุดสถานที่จริง Google">
                                   🟢 Google
@@ -445,29 +565,34 @@ export default function CustomersPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className="font-medium text-slate-800">{c.district || '-'}</span>
-                            <span className="text-[11px] text-slate-400 block">{c.province || ''}</span>
+                            <span className="font-semibold text-slate-800">{c.district || '-'}</span>
+                            <span className="text-[10px] text-slate-400 block">{c.province || 'สมุทรปราการ'}</span>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
+                            <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${stageConf.dot}`} />
                               <span>{c.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span>
                             </span>
+                            {(c.activities_count !== undefined && c.activities_count > 0) && (
+                              <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                {c.activities_count} กิจกรรม
+                              </span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             {c.phone ? (
                               <a
                                 href={`tel:${c.phone.replace(/\s+/g, '')}`}
-                                className="font-medium text-emerald-600 hover:underline flex items-center space-x-1"
+                                className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center space-x-1"
                               >
-                                <Phone className="w-3 h-3" />
+                                <Phone className="w-3 h-3 text-emerald-500" />
                                 <span>{c.phone}</span>
                               </a>
                             ) : (
                               <span className="text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 max-w-[220px] truncate">
+                          <td className="py-3.5 px-4 max-w-[200px] truncate">
                             {c.email ? (
                               <button
                                 type="button"
@@ -475,17 +600,17 @@ export default function CustomersPage() {
                                   setEmailCustomer(c);
                                   setIsEmailModalOpen(true);
                                 }}
-                                className="font-medium text-blue-600 hover:underline flex items-center space-x-1 truncate text-left"
+                                className="font-bold text-purple-600 hover:text-purple-800 hover:underline flex items-center space-x-1 truncate text-left"
                                 title="ส่งอีเมล / Gmail พร้อมแม่แบบ"
                               >
-                                <Mail className="w-3 h-3 shrink-0 text-blue-500" />
+                                <Mail className="w-3 h-3 shrink-0 text-purple-500" />
                                 <span className="truncate">{c.email}</span>
                               </button>
                             ) : (
                               <span className="text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
+                          <td className="py-3.5 px-4 max-w-xs truncate text-slate-600 font-medium">
                             {c.target_product || '-'}
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -494,7 +619,7 @@ export default function CustomersPage() {
                                 href={getDbdSearchUrl(c)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors text-[11px] flex items-center space-x-1"
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors text-[11px] flex items-center space-x-1"
                                 title="ค้นหาข้อมูลนิติบุคคล DBD / ทุนจดทะเบียน / งบการเงิน"
                               >
                                 <span>🏛️ DBD</span>
@@ -504,8 +629,8 @@ export default function CustomersPage() {
                                   href={c.google_maps_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
-                                  title="เปิด Google Maps"
+                                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
+                                  title="เปิด Google Maps นำทาง"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
@@ -515,14 +640,14 @@ export default function CustomersPage() {
                                   setSelectedCustomer(c);
                                   setIsDetailModalOpen(true);
                                 }}
-                                className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold transition-colors"
+                                className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold transition-colors"
                               >
-                                <Edit className="w-3.5 h-3.5" />
-                                <span>ดู & บันทึก</span>
+                                <Edit className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>บันทึกงาน</span>
                               </button>
                               <button
                                 onClick={() => setCustomerToDelete(c)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                 title="ลบโรงงานนี้"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -536,35 +661,38 @@ export default function CustomersPage() {
                 </table>
               </div>
             </div>
+          )}
 
-            {/* Pagination Controls */}
-            <div className="p-3 sm:p-4 rounded-2xl border border-slate-200 bg-white flex items-center justify-between text-xs text-slate-600 shadow-xs">
-              <div className="text-[11px] sm:text-xs">
-                {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filtered.length)} จาก {filtered.length}
+          {/* Pagination Controls Matching DBD Design */}
+          {!loading && filtered.length > 0 && (
+            <div className="px-4 py-3.5 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="font-medium">
+                แสดงผล <strong>{((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filtered.length)}</strong> จากทั้งหมด <strong>{filtered.length.toLocaleString()}</strong> โรงงาน
               </div>
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 sm:p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed touch-press"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold flex items-center space-x-1 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
+                  <span>ก่อนหน้า</span>
                 </button>
-                <span className="font-bold px-1.5 sm:px-2 text-xs">
+                <div className="px-3 py-1.5 font-bold bg-white border border-slate-200 rounded-xl text-slate-800">
                   หน้า {currentPage} / {totalPages}
-                </span>
+                </div>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 sm:p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed touch-press"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold flex items-center space-x-1 transition-colors"
                 >
+                  <span>ถัดไป</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-
-          </div>
-        )}
+          )}
+        </div>
 
       </main>
 
