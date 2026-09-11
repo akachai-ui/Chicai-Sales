@@ -50,6 +50,12 @@ export default function DBDLeadsPage() {
     inCrm: 0
   });
 
+  const isGoogleBusinessProfile = (c: { google_maps_url?: string | null; phone?: string | null; pin_type?: string | null }) => {
+    if (c.pin_type === 'GOOGLE_BUSINESS') return true;
+    if (c.pin_type === 'DBD_ADDRESS') return false;
+    return !!(c.google_maps_url && c.google_maps_url.includes('place_id'));
+  };
+
   const fetchExistingCustomers = async () => {
     try {
       const { data } = await supabase
@@ -90,7 +96,7 @@ export default function DBDLeadsPage() {
         .from('dbd_companies')
         .select('*', { count: 'exact', head: true })
         .eq('province', 'สมุทรปราการ')
-        .not('place_id', 'is', null);
+        .ilike('google_maps_url', '%place_id%');
 
       const totalF = factoryCount || 0;
       const gCount = googleCount || 0;
@@ -130,9 +136,9 @@ export default function DBDLeadsPage() {
       }
 
       if (selectedPinType === 'GOOGLE_BUSINESS') {
-        query = query.not('place_id', 'is', null);
+        query = query.ilike('google_maps_url', '%place_id%');
       } else if (selectedPinType === 'DBD_ADDRESS') {
-        query = query.is('place_id', null).not('latitude', 'is', null);
+        query = query.not('latitude', 'is', null).not('google_maps_url', 'ilike', '%place_id%');
       }
 
       if (searchQuery.trim()) {
@@ -179,7 +185,7 @@ export default function DBDLeadsPage() {
         return;
       }
 
-      const isGoogleBusiness = !!company.place_id;
+      const isGoogleBusiness = isGoogleBusinessProfile(company);
 
       // 2. Prepare customer payload
       const newCustomerPayload: Partial<Customer> = {
@@ -200,7 +206,7 @@ export default function DBDLeadsPage() {
         dbd_company_id: company.id,
         registered_capital: company.registered_capital || null,
         registered_name: company.name,
-        place_id: company.place_id || null,
+        place_id: isGoogleBusiness ? company.place_id : null,
         notes: isGoogleBusiness
           ? '📍 หมุดสถานที่จริง (Google Business Profile)'
           : '📍 พิกัดแปลงจากที่อยู่ DBD (ยังไม่ได้ปักหมุดธุรกิจ Google)'
@@ -366,8 +372,8 @@ export default function DBDLeadsPage() {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               >
                 <option value="ALL">🏷️ ป้ายกำกับหมุดทั้งหมด</option>
-                <option value="GOOGLE_BUSINESS">🟢 เฉพาะธุรกิจลงทะเบียน Google (มีเบอร์/รีวิว)</option>
-                <option value="DBD_ADDRESS">📍 เฉพาะพิกัดตามที่อยู่ DBD (ยังไม่ลงทะเบียน)</option>
+                <option value="GOOGLE_BUSINESS">🟢 เฉพาะธุรกิจลงทะเบียน Google ({stats.googleBusinessCount.toLocaleString()} แห่ง)</option>
+                <option value="DBD_ADDRESS">📍 เฉพาะพิกัดตามที่อยู่ DBD ({stats.dbdAddressCount.toLocaleString()} แห่ง)</option>
               </select>
             </div>
           </div>
@@ -441,10 +447,9 @@ export default function DBDLeadsPage() {
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {companies.map((c) => {
                       const inCrm = (c.tax_id && existingTaxIds.has(c.tax_id)) || existingDbdIds.has(c.id);
-                      const customerId = (c.tax_id && existingTaxIds.get(c.tax_id)) || existingDbdIds.get(c.id);
                       const isImporting = importingId === c.id;
                       const isSuccess = importSuccessId === c.id;
-                      const isGoogleBusiness = !!c.place_id;
+                      const isGoogleBusiness = isGoogleBusinessProfile(c);
 
                       return (
                         <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
@@ -474,7 +479,7 @@ export default function DBDLeadsPage() {
                           </td>
 
                           {/* Pin Type Badge */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             {isGoogleBusiness ? (
                               <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -618,7 +623,7 @@ export default function DBDLeadsPage() {
                   const inCrm = (c.tax_id && existingTaxIds.has(c.tax_id)) || existingDbdIds.has(c.id);
                   const isImporting = importingId === c.id;
                   const isSuccess = importSuccessId === c.id;
-                  const isGoogleBusiness = !!c.place_id;
+                  const isGoogleBusiness = isGoogleBusinessProfile(c);
 
                   return (
                     <div key={c.id} className="p-4 space-y-2.5">
