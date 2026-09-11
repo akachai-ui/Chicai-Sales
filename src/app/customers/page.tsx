@@ -426,7 +426,18 @@ export default function CustomersPage() {
                             #{c.seq || c.id}
                           </td>
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900 leading-snug">{c.name}</div>
+                            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                              <span className="font-bold text-slate-900 leading-snug">{c.name}</span>
+                              {c.place_id || c.pin_type === 'GOOGLE_BUSINESS' ? (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="หมุดสถานที่จริง Google">
+                                  🟢 Google
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="พิกัดที่อยู่ DBD">
+                                  📍 DBD
+                                </span>
+                              )}
+                            </div>
                             {c.address && (
                               <div className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
                                 {c.address}

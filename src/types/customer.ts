@@ -33,6 +33,7 @@ export interface Customer {
   dbd_company_id?: number | null;
   registered_capital?: number | null;
   registered_name?: string | null;
+  pin_type?: 'GOOGLE_BUSINESS' | 'DBD_ADDRESS' | string | null;
   activities_count?: number;
   latest_activity?: CustomerActivity | null;
   created_at?: string;
@@ -103,6 +104,7 @@ export interface DBDCompany {
   website: string | null;
   google_maps_url: string | null;
   place_id: string | null;
+  pin_type?: 'GOOGLE_BUSINESS' | 'DBD_ADDRESS' | string | null;
   geocoded_at: string | null;
   // Computed in UI
   is_in_crm?: boolean;

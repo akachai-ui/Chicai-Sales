@@ -17,7 +17,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  BadgeInfo
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,14 +30,14 @@ export default function DBDLeadsPage() {
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   const [selectedIndustry, setSelectedIndustry] = useState('โรงงานอุตสาหกรรมการผลิต');
   const [selectedCapital, setSelectedCapital] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedPinType, setSelectedPinType] = useState('ALL'); // ALL, GOOGLE_BUSINESS, DBD_ADDRESS
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 25;
 
   // Track existing customers in CRM for instant duplicate checking
-  const [existingTaxIds, setExistingTaxIds] = useState<Map<string, number>>(new Map());
-  const [existingDbdIds, setExistingDbdIds] = useState<Map<number, number>>(new Map());
+  const [existingTaxIds, setExistingTaxIds] = useState<Map<string, number>>(() => new Map<string, number>());
+  const [existingDbdIds, setExistingDbdIds] = useState<Map<number, number>>(() => new Map<number, number>());
   const [importingId, setImportingId] = useState<number | null>(null);
   const [importSuccessId, setImportSuccessId] = useState<number | null>(null);
 
@@ -43,6 +45,8 @@ export default function DBDLeadsPage() {
   const [stats, setStats] = useState({
     totalFactories: 0,
     withPin: 0,
+    googleBusinessCount: 0,
+    dbdAddressCount: 0,
     inCrm: 0
   });
 
@@ -82,10 +86,22 @@ export default function DBDLeadsPage() {
         .eq('province', 'สมุทรปราการ')
         .not('latitude', 'is', null);
 
+      const { count: googleCount } = await supabase
+        .from('dbd_companies')
+        .select('*', { count: 'exact', head: true })
+        .eq('province', 'สมุทรปราการ')
+        .not('place_id', 'is', null);
+
+      const totalF = factoryCount || 0;
+      const gCount = googleCount || 0;
+      const dCount = Math.max(0, (pinCount || 0) - gCount);
+
       setStats((prev) => ({
         ...prev,
-        totalFactories: factoryCount || 0,
-        withPin: pinCount || 0
+        totalFactories: totalF,
+        withPin: pinCount || 0,
+        googleBusinessCount: gCount,
+        dbdAddressCount: dCount
       }));
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -113,8 +129,10 @@ export default function DBDLeadsPage() {
         query = query.gte('registered_capital', minCapital);
       }
 
-      if (selectedStatus === 'HAS_PIN') {
-        query = query.not('latitude', 'is', null);
+      if (selectedPinType === 'GOOGLE_BUSINESS') {
+        query = query.not('place_id', 'is', null);
+      } else if (selectedPinType === 'DBD_ADDRESS') {
+        query = query.is('place_id', null).not('latitude', 'is', null);
       }
 
       if (searchQuery.trim()) {
@@ -149,7 +167,7 @@ export default function DBDLeadsPage() {
 
   useEffect(() => {
     fetchCompanies();
-  }, [selectedDistrict, selectedIndustry, selectedCapital, selectedStatus, searchQuery, currentPage]);
+  }, [selectedDistrict, selectedIndustry, selectedCapital, selectedPinType, searchQuery, currentPage]);
 
   const handleImportToCrm = async (company: DBDCompany) => {
     setImportingId(company.id);
@@ -160,6 +178,8 @@ export default function DBDLeadsPage() {
         setImportingId(null);
         return;
       }
+
+      const isGoogleBusiness = !!company.place_id;
 
       // 2. Prepare customer payload
       const newCustomerPayload: Partial<Customer> = {
@@ -179,7 +199,11 @@ export default function DBDLeadsPage() {
         tax_id: company.tax_id || null,
         dbd_company_id: company.id,
         registered_capital: company.registered_capital || null,
-        registered_name: company.name
+        registered_name: company.name,
+        place_id: company.place_id || null,
+        notes: isGoogleBusiness
+          ? '📍 หมุดสถานที่จริง (Google Business Profile)'
+          : '📍 พิกัดแปลงจากที่อยู่ DBD (ยังไม่ได้ปักหมุดธุรกิจ Google)'
       };
 
       const { data, error } = await supabase
@@ -228,7 +252,7 @@ export default function DBDLeadsPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         {/* Header Title & Live Stats */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center space-x-2.5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
@@ -242,21 +266,31 @@ export default function DBDLeadsPage() {
                   </span>
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  ค้นหาโรงงานอุตสาหกรรมที่จดทะเบียนถูกต้อง พร้อมพิกัดหมุด และดึงเข้าแผนที่เซลส์ในคลิกเดียว
+                  ค้นหาโรงงานอุตสาหกรรมที่จดทะเบียนถูกต้อง พร้อมจำแนกประเภทหมุด และดึงเข้าแผนที่เซลส์ในคลิกเดียว
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+          {/* Quick Metrics Bar with Pin Type Distribution */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
             <div className="px-3 py-1.5 border-r border-slate-100">
-              <div className="text-[11px] font-semibold text-slate-400">โรงงานใน จ.สมุทรปราการ</div>
+              <div className="text-[11px] font-semibold text-slate-400">โรงงานสมุทรปราการ</div>
               <div className="text-base sm:text-lg font-black text-slate-800">{stats.totalFactories.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
             </div>
             <div className="px-3 py-1.5 border-r border-slate-100">
-              <div className="text-[11px] font-semibold text-emerald-600">มีพิกัดแผนที่แล้ว</div>
-              <div className="text-base sm:text-lg font-black text-emerald-700">{stats.withPin.toLocaleString()} <span className="text-xs font-normal text-slate-400">หมุด</span></div>
+              <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>หมุดธุรกิจ Google</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-emerald-700">{stats.googleBusinessCount.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
+            </div>
+            <div className="px-3 py-1.5 border-r border-slate-100">
+              <div className="text-[11px] font-semibold text-amber-600 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>พิกัดที่อยู่ DBD</span>
+              </div>
+              <div className="text-base sm:text-lg font-black text-amber-700">{stats.dbdAddressCount.toLocaleString()} <span className="text-xs font-normal text-slate-400">แห่ง</span></div>
             </div>
             <div className="px-3 py-1.5">
               <div className="text-[11px] font-semibold text-blue-600">อยู่ใน Sales CRM</div>
@@ -321,18 +355,19 @@ export default function DBDLeadsPage() {
               </select>
             </div>
 
-            {/* 4. Map Pin & Status Filter */}
+            {/* 4. Pin Type Filter */}
             <div>
               <select
-                value={selectedStatus}
+                value={selectedPinType}
                 onChange={(e) => {
-                  setSelectedStatus(e.target.value);
+                  setSelectedPinType(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               >
-                <option value="ALL">🔍 ทุกสถานะ (มี/ไม่มีพิกัด)</option>
-                <option value="HAS_PIN">📍 เฉพาะที่มีพิกัดหมุดแล้ว</option>
+                <option value="ALL">🏷️ ป้ายกำกับหมุดทั้งหมด</option>
+                <option value="GOOGLE_BUSINESS">🟢 เฉพาะธุรกิจลงทะเบียน Google (มีเบอร์/รีวิว)</option>
+                <option value="DBD_ADDRESS">📍 เฉพาะพิกัดตามที่อยู่ DBD (ยังไม่ลงทะเบียน)</option>
               </select>
             </div>
           </div>
@@ -344,6 +379,18 @@ export default function DBDLeadsPage() {
               {selectedDistrict !== 'ALL' && (
                 <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium">
                   อ.{selectedDistrict}
+                </span>
+              )}
+              {selectedPinType === 'GOOGLE_BUSINESS' && (
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  หมุดธุรกิจ Google
+                </span>
+              )}
+              {selectedPinType === 'DBD_ADDRESS' && (
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  พิกัดที่อยู่ DBD
                 </span>
               )}
             </div>
@@ -383,10 +430,11 @@ export default function DBDLeadsPage() {
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="py-3 px-4">ชื่อโรงงาน / นิติบุคคล</th>
+                      <th className="py-3 px-4">ประเภทหมุด (ป้ายกำกับ)</th>
                       <th className="py-3 px-4">ที่ตั้ง / อำเภอ</th>
                       <th className="py-3 px-4 text-right">ทุนจดทะเบียน</th>
                       <th className="py-3 px-4">หมวดสินค้า / วัตถุประสงค์</th>
-                      <th className="py-3 px-4 text-center">พิกัด & ช่องทางติดต่อ</th>
+                      <th className="py-3 px-4 text-center">พิกัด & ติดต่อ</th>
                       <th className="py-3 px-4 text-center">การจัดการ</th>
                     </tr>
                   </thead>
@@ -396,6 +444,7 @@ export default function DBDLeadsPage() {
                       const customerId = (c.tax_id && existingTaxIds.get(c.tax_id)) || existingDbdIds.get(c.id);
                       const isImporting = importingId === c.id;
                       const isSuccess = importSuccessId === c.id;
+                      const isGoogleBusiness = !!c.place_id;
 
                       return (
                         <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
@@ -422,6 +471,21 @@ export default function DBDLeadsPage() {
                                 </span>
                               )}
                             </div>
+                          </td>
+
+                          {/* Pin Type Badge */}
+                          <td className="py-3.5 px-4">
+                            {isGoogleBusiness ? (
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>🟢 ธุรกิจลงทะเบียน Google</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                <span>📍 พิกัดที่อยู่ DBD</span>
+                              </span>
+                            )}
                           </td>
 
                           {/* Location */}
@@ -463,7 +527,11 @@ export default function DBDLeadsPage() {
                                   href={c.google_maps_url || `https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isGoogleBusiness
+                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                  }`}
                                   title={`ดูพิกัด Google Maps (${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)})`}
                                 >
                                   <MapPin className="w-4 h-4" />
@@ -550,12 +618,24 @@ export default function DBDLeadsPage() {
                   const inCrm = (c.tax_id && existingTaxIds.has(c.tax_id)) || existingDbdIds.has(c.id);
                   const isImporting = importingId === c.id;
                   const isSuccess = importSuccessId === c.id;
+                  const isGoogleBusiness = !!c.place_id;
 
                   return (
                     <div key={c.id} className="p-4 space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-bold text-slate-900 text-sm">{c.name}</h3>
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            <h3 className="font-bold text-slate-900 text-sm">{c.name}</h3>
+                            {isGoogleBusiness ? (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                🟢 Google Business
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                📍 ที่อยู่ DBD
+                              </span>
+                            )}
+                          </div>
                           {c.tax_id && (
                             <a
                               href={getDbdSearchUrl(c.tax_id)}
@@ -595,7 +675,9 @@ export default function DBDLeadsPage() {
                               href={c.google_maps_url || `https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center space-x-1"
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 ${
+                                isGoogleBusiness ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                              }`}
                             >
                               <MapPin className="w-3 h-3" />
                               <span>เปิดหมุด</span>
