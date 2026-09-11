@@ -16,10 +16,6 @@ CREATE TABLE IF NOT EXISTS public.dbd_companies (
     zipcode VARCHAR(10),
     batch_year INT,
     batch_month INT,
-    pipeline_stage TEXT DEFAULT 'ยังไม่ได้ติดต่อ',
-    phone TEXT,
-    email TEXT,
-    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

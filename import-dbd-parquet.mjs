@@ -69,7 +69,6 @@ async function main() {
           zipcode: r[13] ? String(r[13]).trim() : null,
           batch_year: r[14] ? Number(r[14]) : null,
           batch_month: r[15] ? Number(r[15]) : null,
-          pipeline_stage: 'ยังไม่ได้ติดต่อ',
         };
 
         batch.push(record);
