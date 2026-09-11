@@ -1,5 +1,3 @@
-import { Customer } from '@/types/customer';
-
 export interface DistrictZone {
   name: string;
   count: number;
@@ -21,6 +19,13 @@ const ZONE_COLORS: { color: string; border: string; fill: string }[] = [
   { color: '#4f46e5', border: '#6366f1', fill: 'rgba(99, 102, 241, 0.08)' }, // Indigo
   { color: '#c026d3', border: '#d946ef', fill: 'rgba(217, 70, 239, 0.08)' }, // Fuchsia
 ];
+
+function normalizeDistrictName(raw?: string | null): string {
+  if (!raw) return 'สมุทรปราการ';
+  let s = raw.trim().replace(/^อ\./, '').replace(/^อำเภอ/, '').trim();
+  if (s === 'เมือง' || s === 'เมืองฯ') s = 'เมืองสมุทรปราการ';
+  return s;
+}
 
 // Calculate 2D Convex Hull (Monotone Chain algorithm)
 function calculateConvexHull(points: [number, number][]): [number, number][] {
@@ -67,14 +72,17 @@ function expandPolygon(polygon: [number, number][], center: [number, number], fa
 }
 
 /**
- * Generate District Zones from Customers
+ * Generate District Zones from any list of points
  */
-export function generateDistrictZones(customers: Customer[], minCount: number = 5): DistrictZone[] {
+export function generateDistrictZones(
+  items: { district?: string | null; latitude?: number | null; longitude?: number | null }[],
+  minCount: number = 10
+): DistrictZone[] {
   const groups: Record<string, [number, number][]> = {};
 
-  customers.forEach((c) => {
-    if (!c.district || !c.latitude || !c.longitude) return;
-    const d = c.district.trim();
+  items.forEach((c) => {
+    if (!c.latitude || !c.longitude) return;
+    const d = normalizeDistrictName(c.district);
     if (!groups[d]) groups[d] = [];
     groups[d].push([c.latitude, c.longitude]);
   });

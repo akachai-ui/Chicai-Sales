@@ -318,7 +318,7 @@ export default function CustomerMapInner({
         name: c.name,
         phone: c.phone,
         address: c.address,
-        district: c.district,
+        district: normalizeDistrictName(c.district),
         province: c.province || 'สมุทรปราการ',
         website: c.website,
         google_maps_url: c.google_maps_url,
@@ -354,7 +354,7 @@ export default function CustomerMapInner({
         name: d.name,
         phone: d.phone,
         address: d.address ? `${d.address} ต.${d.subdistrict || ''} อ.${d.district || ''} จ.${d.province || ''}` : null,
-        district: d.district,
+        district: normalizeDistrictName(d.district),
         province: d.province || 'สมุทรปราการ',
         website: d.website,
         google_maps_url: d.google_maps_url,
@@ -378,6 +378,13 @@ export default function CustomerMapInner({
     return list;
   }, [rawCustomers, rawDbdCompanies]);
 
+function normalizeDistrictName(raw?: string | null): string {
+  if (!raw) return 'สมุทรปราการ';
+  let s = raw.trim().replace(/^อ\./, '').replace(/^อำเภอ/, '').trim();
+  if (s === 'เมือง' || s === 'เมืองฯ') s = 'เมืองสมุทรปราการ';
+  return s;
+}
+
   // Summary counts of contacted vs uncontacted
   const statsSummary = useMemo(() => {
     let contacted = 0;
@@ -392,10 +399,10 @@ export default function CustomerMapInner({
     return { contacted, uncontacted, total: unifiedFactories.length };
   }, [unifiedFactories]);
 
-  // Generate District Zones automatically from points
+  // Generate District Zones automatically from all unified points
   const districtZones = useMemo(() => {
-    return generateDistrictZones(rawCustomers, 5);
-  }, [rawCustomers]);
+    return generateDistrictZones(unifiedFactories, 10);
+  }, [unifiedFactories]);
 
   // Extract unique districts
   const districts = useMemo(() => {
