@@ -203,8 +203,14 @@ export default function DBDLeadsPage() {
 
       const isGoogleBusiness = isGoogleBusinessProfile(company);
 
-      // 2. Prepare customer payload
-      const newCustomerPayload: Partial<Customer> = {
+      // 2. Prepare customer payload matching exact table columns
+      const noteParts = [
+        isGoogleBusiness ? '📍 หมุดสถานที่จริง (Google Business Profile)' : '📍 พิกัดที่อยู่ DBD (ยังไม่ได้ลงทะเบียน Google)',
+        company.registered_capital ? `💰 ทุนจดทะเบียน: ${(company.registered_capital).toLocaleString()} บาท` : null,
+        company.tsic_code ? `TSIC: ${company.tsic_code}` : null
+      ].filter(Boolean);
+
+      const newCustomerPayload: any = {
         name: company.name,
         address: company.address
           ? `${company.address} ต.${company.subdistrict || ''} อ.${company.district || ''} จ.${company.province || ''} ${company.zipcode || ''}`.trim()
@@ -220,13 +226,9 @@ export default function DBDLeadsPage() {
         pipeline_stage: 'ยังไม่ได้ติดต่อ',
         tax_id: company.tax_id || null,
         dbd_company_id: company.id,
-        registered_capital: company.registered_capital || null,
-        registered_name: company.name,
         place_id: isGoogleBusiness ? company.place_id : null,
         pin_type: isGoogleBusiness ? 'GOOGLE_BUSINESS' : 'DBD_ADDRESS',
-        notes: isGoogleBusiness
-          ? '📍 หมุดสถานที่จริง (Google Business Profile)'
-          : '📍 พิกัดแปลงจากที่อยู่ DBD (ยังไม่ได้ปักหมุดธุรกิจ Google)'
+        notes: noteParts.join(' | ')
       };
 
       const { data, error } = await supabase
