@@ -81,4 +81,30 @@ export function getStageConfig(stage: string | null | undefined) {
     border: 'border-slate-300',
   };
 }
-
+export interface DBDCompany {
+  id: number;
+  tax_id: string | null;
+  name: string;
+  registered_date: string | null;
+  registered_capital: number | null;
+  tsic_code: string | null;
+  objective: string | null;
+  address: string | null;
+  subdistrict: string | null;
+  district: string | null;
+  province: string | null;
+  zipcode: string | null;
+  industry_group: string | null;
+  batch_year: number | null;
+  batch_month: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  website: string | null;
+  google_maps_url: string | null;
+  place_id: string | null;
+  geocoded_at: string | null;
+  // Computed in UI
+  is_in_crm?: boolean;
+  crm_customer_id?: number | null;
+}
