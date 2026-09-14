@@ -126,36 +126,68 @@ export default function EmailComposeModal({
     }
   };
 
+  // Template options to prevent spam filtering
+  const [templateType, setTemplateType] = useState<"standard" | "formal">("formal");
+
+  // Template contents
+  const getTemplateData = (type: "standard" | "formal", custName: string) => {
+    if (type === "formal") {
+      return {
+        subject: `ขออนุญาตนำเสนอข้อมูลแคตตาล็อกเครื่องจักรอุตสาหกรรม - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
+        body: `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุงและวิศวกรรม ${custName}
+
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ขออนุญาตนำเสนอข้อมูลผลิตภัณฑ์เครื่องจักรอุตสาหกรรมสำหรับโรงงาน เพื่อช่วยเพิ่มประสิทธิภาพการผลิต ยืดอายุการใช้งานน้ำมันหล่อลื่น และลดค่าใช้จ่ายในกระบวนการผลิต:
+
+1. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกคู่) รุ่น LYJ-001-D: ความละเอียด 1 ไมครอน เสียบไฟ 220V ใช้งานได้ทันที
+2. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกเดี่ยว) รุ่น LYJ-001-S: กรองละเอียด 1 ไมครอน ขนาดกะทัดรัด เคลื่อนย้ายสะดวก
+3. เครื่องกำจัดตะกรันและเศษโลหะ รุ่น NXC-QZJ-116A: ระบบแรงดันลม ทำความสะอาดถังน้ำมันรวดเร็ว
+4. เครื่องฟื้นฟูน้ำยาหล่อเย็นและกำจัดกลิ่น รุ่น NXC-ZSJ-100: โอโซนฆ่าเชื้อ แยกน้ำมันลอย ช่วยยืดอายุน้ำยาหล่อเย็น
+
+ทางบริษัทยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานจริง (Demo On-site) ที่โรงงานของท่านโดยไม่มีค่าใช้จ่าย
+
+📖 ท่านสามารถดูข้อมูลและสเปกเครื่องจักรเพิ่มเติมได้ที่: https://catalog-chicai-lilac.vercel.app/
+
+หากต้องการสอบถามข้อมูลเพิ่มเติม หรือนัดหมายเข้าสาธิตเครื่องจักร สามารถติดต่อได้ตามข้อมูลด้านล่างนี้ครับ
+
+ขอแสดงความนับถือ,
+เอกชัย หาบ้านแท่น (แม็ก)
+ฝ่ายขายและบริการเทคนิค โทร: 092-479-7666
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
+      };
+    } else {
+      return {
+        subject: `[ประสานงานฝ่ายจัดซื้อ/ซ่อมบำรุง] โซลูชันฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น - ${custName}`,
+        body: `เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง ${custName}
+
+CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่องจักรอัจฉริยะสำหรับฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น" เพื่อช่วยลดต้นทุนการซื้อน้ำมันใหม่ได้สูงสุดถึง 70%
+
+1. เครื่องกรองน้ำมัน (กระบอกคู่) รุ่น LYJ-001-D (82,000 บาท)
+2. เครื่องกรองน้ำมัน (กระบอกเดี่ยว) รุ่น LYJ-001-S (65,000 บาท)
+3. เครื่องกำจัดตะกรัน รุ่น NXC-QZJ-116A (82,000 บาท)
+4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100 (เริ่มต้น 175,000 บาท)
+
+[ บริการพิเศษ ] ยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานให้ทดลองใช้งานฟรี (Demo On-site) ถึงหน้างานจริง
+📖 แคตตาล็อกออนไลน์: https://catalog-chicai-lilac.vercel.app/
+
+ขอแสดงความนับถือ,
+เอกชัย หาบ้านแท่น (แม็ก) 092-479-7666
+CHICAI ELECTRIC (THAILAND) CO., LTD.`
+      };
+    }
+  };
+
   useEffect(() => {
     if (isOpen && customer) {
       const customerName = customer.name || "ลูกค้า";
       setToEmail(customer.email || "");
-      setSubject(`[รบกวนส่งต่อ ฝ่ายจัดซื้อ / ซ่อมบำรุง] เครื่องกรองน้ำมันและฟื้นฟูน้ำยาหล่อเย็น ลดต้นทุน 70% - ${customerName}`);
-      setBody(`เรียน แอดมิน / ผู้ดูแลอีเมลกลางของบริษัท (Dear Admin)
-รบกวนส่งต่ออีเมลฉบับนี้ให้กับ ฝ่ายจัดซื้อ (Purchasing) หรือ ฝ่ายซ่อมบำรุง (Maintenance) ของ ${customerName} เพื่อพิจารณาโซลูชันลดต้นทุนการผลิตและยืดอายุเครื่องจักรครับ ขอขอบพระคุณล่วงหน้าครับ
-
---------------------------------------------------
-
-เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง ${customerName}
-
-CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่องจักรอัจฉริยะสำหรับฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น" ลดต้นทุนการซื้อน้ำมันใหม่ได้ถึง 70%
-1. เครื่องกรองน้ำมัน (กระบอกคู่) รุ่น LYJ-001-D: กรองละเอียด 1 ไมครอน เสียบไฟ 220V ใช้ได้ทันที (82,000 บาท)
-2. เครื่องกรองน้ำมัน (กระบอกเดี่ยว) รุ่น LYJ-001-S: กรองละเอียด 1 ไมครอน ขนาดกะทัดรัด (65,000 บาท)
-3. เครื่องกำจัดตะกรัน รุ่น NXC-QZJ-116A: ดูดตะกรันและเศษโลหะด้วยแรงดันระบบลม (82,000 บาท)
-4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100: โอโซนฆ่าเชื้อ ลดกลิ่นเหม็น และแยกน้ำมันลอย (เริ่มต้น 175,000 บาท)
-
-[ สิทธิพิเศษสำหรับ ${customerName} ]
-ยินดีนำเครื่องจักรเข้าไป "สาธิต (Demo On-site) ให้ทดลองใช้งานฟรีถึงหน้างานจริง"
-📖 แคตตาล็อกออนไลน์: https://catalog-chicai-lilac.vercel.app/
-
-ขอแสดงความนับถือ / Best Regards,
-เอกชัย หาบ้านแท่น (แม็ก) 092-479-7666
-CHICAI ELECTRIC (THAILAND) CO., LTD.`);
+      const tpl = getTemplateData(templateType, customerName);
+      setSubject(tpl.subject);
+      setBody(tpl.body);
       setDirectSendSuccess(false);
       setDirectSendError(null);
       checkPreviousEmailHistory(customer);
     }
-  }, [isOpen, customer]);
+  }, [isOpen, customer, templateType]);
 
   if (!isOpen || !customer) return null;
 
@@ -259,6 +291,46 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
       setDirectSendError(err.message || "เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script");
     } finally {
       setIsSendingDirect(false);
+    }
+  };
+
+  const handleOpenGmailWeb = async () => {
+    if (!cleanToEmail) {
+      alert("กรุณาระบุอีเมลผู้รับก่อน");
+      return;
+    }
+
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      cleanToEmail
+    )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
+
+    // Optional: Log sending intent to Supabase
+    if (customer.id) {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        await supabase.from("customer_activities").insert({
+          customer_id: customer.id,
+          activity_type: "ส่งอีเมล (Gmail)",
+          activity_date: today,
+          contact_person: customer.contact_person || null,
+          details: `เปิดส่งอีเมลผ่าน Gmail Web/App ถึง ${cleanToEmail}`,
+        });
+
+        await supabase
+          .from("customers")
+          .update({
+            pipeline_stage: "ติดต่อแล้ว / ติดตามงาน",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", customer.id);
+        
+        if (onEmailSent) {
+          onEmailSent();
+        }
+      } catch (e) {
+        console.error("Error logging Gmail activity:", e);
+      }
     }
   };
 
@@ -412,24 +484,44 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             </div>
           )}
 
-          {/* Active Template Card */}
-          <div className="p-3 bg-gradient-to-r from-teal-50/90 via-emerald-50/60 to-teal-50/90 border border-teal-200/70 rounded-2xl flex items-center justify-between shadow-xs">
-            <div className="flex items-center space-x-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-base shadow-xs shrink-0">
-                🌟
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
-                  CHICAI Official (ลดต้นทุน 70% + Demo)
-                </h4>
-                <p className="text-[10.5px] text-teal-800 mt-0.5">
-                  E-Catalog • ตารางราคาพิเศษ • รูปภาพจาก Google Drive
-                </p>
-              </div>
+          {/* Template Selection Tabs */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+              รูปแบบข้อความ (Template)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setTemplateType("formal")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${
+                  templateType === "formal"
+                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span>🛡️ ทางการ (ป้องกัน Spam)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateType("standard")}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${
+                  templateType === "standard"
+                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span>⚡ โปรโมชั่น (ลด 70%)</span>
+              </button>
             </div>
-            <span className="hidden sm:inline-block px-2 py-0.5 bg-teal-700 text-white rounded-md text-[9.5px] font-extrabold tracking-wider shrink-0 shadow-xs ml-2">
-              Gmail Direct
-            </span>
+            {templateType === "formal" ? (
+              <p className="text-[10px] text-teal-700 font-medium">
+                ✅ แนะนำสำหรับส่งหาอีเมลกลาง (@gmail.com / @yahoo.com) เพื่อเลี่ยงตัวกรอง Spam ของ Google
+              </p>
+            ) : (
+              <p className="text-[10px] text-amber-700 font-medium">
+                ⚠️ หัวข้อมีคำว่า &quot;ลดต้นทุน 70%&quot; อาจถูกบางระบบมองว่าเป็นโฆษณา
+              </p>
+            )}
           </div>
 
           {/* Email Recipient (To) */}
@@ -482,13 +574,25 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
         </div>
 
         {/* Modal Footer / Action Buttons */}
-        <div className="p-3 sm:p-3.5 pb-[max(0.85rem,env(safe-area-inset-bottom,12px))] bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-between gap-2 shrink-0">
+        <div className="p-3 sm:p-3.5 pb-[max(0.85rem,env(safe-area-inset-bottom,12px))] bg-white/95 backdrop-blur-md border-t border-slate-100 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press"
+            className="h-11 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press"
           >
             ปิด
+          </button>
+
+          {/* Open in Gmail Web / App Button */}
+          <button
+            type="button"
+            onClick={handleOpenGmailWeb}
+            className="h-11 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press flex items-center justify-center space-x-1.5"
+            title="เปิดเขียนใน Gmail Web/App พร้อมหัวข้อและเนื้อหาครบชุด เพื่อส่งตรงแบบ 100% ปลอดภัย"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">ส่งผ่าน</span>
+            <span>Gmail Web</span>
           </button>
 
           {/* 1-Click Direct Send Button via Google Apps Script Webhook */}
@@ -496,7 +600,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             type="button"
             disabled={isSendingDirect}
             onClick={handleDirectSendEmail}
-            className={`h-11 flex-1 flex items-center justify-center space-x-2 px-4 rounded-xl text-white text-xs sm:text-sm font-black shadow-md transition-all active:scale-[0.98] touch-press disabled:opacity-60 cursor-pointer ${
+            className={`h-11 flex-1 flex items-center justify-center space-x-2 px-3 sm:px-4 rounded-xl text-white text-xs sm:text-sm font-black shadow-md transition-all active:scale-[0.98] touch-press disabled:opacity-60 cursor-pointer min-w-[140px] ${
               previousEmailLog
                 ? "bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-800 shadow-amber-700/20"
                 : "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 shadow-teal-700/20"
@@ -506,17 +610,17 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`);
             {isSendingDirect ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>กำลังส่งอีเมล...</span>
+                <span>กำลังส่ง...</span>
               </>
             ) : previousEmailLog ? (
               <>
                 <RotateCcw className="w-4 h-4" />
-                <span>⚠️ ส่งซ้ำอีกครั้ง (Re-send)</span>
+                <span>⚠️ ส่งซ้ำ (1-Click)</span>
               </>
             ) : (
               <>
                 <Rocket className="w-4 h-4" />
-                <span>🚀 ส่งอัตโนมัติ (1-Click)</span>
+                <span>🚀 ส่งทันที (1-Click)</span>
               </>
             )}
           </button>
