@@ -127,11 +127,33 @@ export default function EmailComposeModal({
   };
 
   // Template options to prevent spam filtering
-  const [templateType, setTemplateType] = useState<"standard" | "formal">("formal");
+  const [templateType, setTemplateType] = useState<"safe_nolink" | "formal" | "standard">("safe_nolink");
 
   // Template contents
-  const getTemplateData = (type: "standard" | "formal", custName: string) => {
-    if (type === "formal") {
+  const getTemplateData = (type: "safe_nolink" | "formal" | "standard", custName: string) => {
+    if (type === "safe_nolink") {
+      return {
+        subject: `เรียน ฝ่ายจัดซื้อ / วิศวกรรม - ข้อมูลเครื่องจักรและบริการ บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
+        body: `เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง/วิศวกรรม ${custName}
+
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ผู้เชี่ยวชาญด้านโซลูชันเครื่องจักรอุตสาหกรรม ขออนุญาตแนะนำตัวและนำเสนอข้อมูลเครื่องจักรสำหรับโรงงานของท่าน:
+
+1. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกคู่/กระบอกเดี่ยว) กรองละเอียด 1 ไมครอน ช่วยยืดอายุน้ำมันหล่อลื่น
+2. เครื่องดูดกำจัดตะกรันและเศษผงโลหะในถังน้ำมันระบบลม
+3. เครื่องฟื้นฟูน้ำยาหล่อเย็น ฆ่าเชื้อด้วยโอโซน กำจัดกลิ่นเหม็นและแยกน้ำมันลอย
+
+บริการพิเศษสำหรับ ${custName}:
+ทางบริษัทยินดีนำเครื่องจักรจริงเข้าไปสาธิตการทำงาน (Demo On-site) ให้ทดลองใช้งานฟรีถึงหน้างาน
+
+หากท่านสนใจรับเอกสาร E-Catalog หรือต้องการนัดหมายชมการสาธิตเครื่องจักร สามารถตอบกลับอีเมลฉบับนี้ หรือติดต่อทีมงานได้โดยตรงครับ
+
+ขอแสดงความนับถือ,
+เอกชัย หาบ้านแท่น (แม็ก)
+ฝ่ายขายและบริการเทคนิค
+โทร: 092-479-7666
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
+      };
+    } else if (type === "formal") {
       return {
         subject: `ขออนุญาตนำเสนอข้อมูลแคตตาล็อกเครื่องจักรอุตสาหกรรม - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
         body: `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุงและวิศวกรรม ${custName}
@@ -144,8 +166,6 @@ export default function EmailComposeModal({
 4. เครื่องฟื้นฟูน้ำยาหล่อเย็นและกำจัดกลิ่น รุ่น NXC-ZSJ-100: โอโซนฆ่าเชื้อ แยกน้ำมันลอย ช่วยยืดอายุน้ำยาหล่อเย็น
 
 ทางบริษัทยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานจริง (Demo On-site) ที่โรงงานของท่านโดยไม่มีค่าใช้จ่าย
-
-📖 ท่านสามารถดูข้อมูลและสเปกเครื่องจักรเพิ่มเติมได้ที่: https://catalog-chicai-lilac.vercel.app/
 
 หากต้องการสอบถามข้อมูลเพิ่มเติม หรือนัดหมายเข้าสาธิตเครื่องจักร สามารถติดต่อได้ตามข้อมูลด้านล่างนี้ครับ
 
@@ -167,7 +187,6 @@ CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่อง�
 4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100 (เริ่มต้น 175,000 บาท)
 
 [ บริการพิเศษ ] ยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานให้ทดลองใช้งานฟรี (Demo On-site) ถึงหน้างานจริง
-📖 แคตตาล็อกออนไลน์: https://catalog-chicai-lilac.vercel.app/
 
 ขอแสดงความนับถือ,
 เอกชัย หาบ้านแท่น (แม็ก) 092-479-7666
@@ -489,37 +508,52 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
               รูปแบบข้อความ (Template)
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => setTemplateType("formal")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${
-                  templateType === "formal"
-                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs"
+                onClick={() => setTemplateType("safe_nolink")}
+                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
+                  templateType === "safe_nolink"
+                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>🛡️ ทางการ (ป้องกัน Spam)</span>
+                <span>🛡️ ปลอดภัย (ไร้ลิงก์)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateType("formal")}
+                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
+                  templateType === "formal"
+                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span>📄 ทางการ</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTemplateType("standard")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${
+                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
                   templateType === "standard"
-                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs"
+                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>⚡ โปรโมชั่น (ลด 70%)</span>
+                <span>⚡ โปรโมชั่น</span>
               </button>
             </div>
-            {templateType === "formal" ? (
+            {templateType === "safe_nolink" ? (
+              <p className="text-[10px] text-teal-800 font-semibold">
+                🛡️ ตัดลิงก์ภายนอกออกทั้งหมด เพื่อไม่ให้ระบบ AI ของ Gmail สงสัยว่าเป็นฟิชชิ่ง ส่งผ่านได้ง่ายที่สุด
+              </p>
+            ) : templateType === "formal" ? (
               <p className="text-[10px] text-teal-700 font-medium">
-                ✅ แนะนำสำหรับส่งหาอีเมลกลาง (@gmail.com / @yahoo.com) เพื่อเลี่ยงตัวกรอง Spam ของ Google
+                ✅ ข้อความทางการ สุภาพ สำหรับแนะนำสินค้าและบริการ
               </p>
             ) : (
               <p className="text-[10px] text-amber-700 font-medium">
-                ⚠️ หัวข้อมีคำว่า &quot;ลดต้นทุน 70%&quot; อาจถูกบางระบบมองว่าเป็นโฆษณา
+                ⚠️ มีคำว่า &quot;ลดต้นทุน 70%&quot; และราคา เหมาะกับลูกค้าที่เคยติดต่อกันแล้ว
               </p>
             )}
           </div>
