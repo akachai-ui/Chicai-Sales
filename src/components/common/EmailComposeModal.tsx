@@ -127,33 +127,11 @@ export default function EmailComposeModal({
   };
 
   // Template options to prevent spam filtering
-  const [templateType, setTemplateType] = useState<"safe_nolink" | "formal" | "standard">("safe_nolink");
+  const [templateType, setTemplateType] = useState<"formal" | "concise" | "standard">("formal");
 
-  // Template contents
-  const getTemplateData = (type: "safe_nolink" | "formal" | "standard", custName: string) => {
-    if (type === "safe_nolink") {
-      return {
-        subject: `เรียน ฝ่ายจัดซื้อ / วิศวกรรม - ข้อมูลเครื่องจักรและบริการ บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
-        body: `เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง/วิศวกรรม ${custName}
-
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ผู้เชี่ยวชาญด้านโซลูชันเครื่องจักรอุตสาหกรรม ขออนุญาตแนะนำตัวและนำเสนอข้อมูลเครื่องจักรสำหรับโรงงานของท่าน:
-
-1. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกคู่/กระบอกเดี่ยว) กรองละเอียด 1 ไมครอน ช่วยยืดอายุน้ำมันหล่อลื่น
-2. เครื่องดูดกำจัดตะกรันและเศษผงโลหะในถังน้ำมันระบบลม
-3. เครื่องฟื้นฟูน้ำยาหล่อเย็น ฆ่าเชื้อด้วยโอโซน กำจัดกลิ่นเหม็นและแยกน้ำมันลอย
-
-บริการพิเศษสำหรับ ${custName}:
-ทางบริษัทยินดีนำเครื่องจักรจริงเข้าไปสาธิตการทำงาน (Demo On-site) ให้ทดลองใช้งานฟรีถึงหน้างาน
-
-หากท่านสนใจรับเอกสาร E-Catalog หรือต้องการนัดหมายชมการสาธิตเครื่องจักร สามารถตอบกลับอีเมลฉบับนี้ หรือติดต่อทีมงานได้โดยตรงครับ
-
-ขอแสดงความนับถือ,
-เอกชัย หาบ้านแท่น (แม็ก)
-ฝ่ายขายและบริการเทคนิค
-โทร: 092-479-7666
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
-      };
-    } else if (type === "formal") {
+  // Template contents (Anti-Spam Optimized: No suspicious .vercel.app links)
+  const getTemplateData = (type: "formal" | "concise" | "standard", custName: string) => {
+    if (type === "formal") {
       return {
         subject: `ขออนุญาตนำเสนอข้อมูลแคตตาล็อกเครื่องจักรอุตสาหกรรม - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
         body: `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุงและวิศวกรรม ${custName}
@@ -167,26 +145,40 @@ export default function EmailComposeModal({
 
 ทางบริษัทยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานจริง (Demo On-site) ที่โรงงานของท่านโดยไม่มีค่าใช้จ่าย
 
-หากต้องการสอบถามข้อมูลเพิ่มเติม หรือนัดหมายเข้าสาธิตเครื่องจักร สามารถติดต่อได้ตามข้อมูลด้านล่างนี้ครับ
+หากท่านต้องการรับไฟล์เอกสารแคตตาล็อกฉบับเต็ม (PDF) หรือสอบถามข้อมูลเพิ่มเติม สามารถตอบกลับอีเมลฉบับนี้ หรือติดต่อได้ตามข้อมูลด้านล่างนี้ครับ
 
 ขอแสดงความนับถือ,
 เอกชัย หาบ้านแท่น (แม็ก)
 ฝ่ายขายและบริการเทคนิค โทร: 092-479-7666
 บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
       };
+    } else if (type === "concise") {
+      return {
+        subject: `ขออนุญาตสอบถามข้อมูลฝ่ายจัดซื้อ / ซ่อมบำรุง - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
+        body: `เรียน ฝ่ายจัดซื้อและซ่อมบำรุง ${custName}
+
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ขออนุญาตสอบถามช่องทางติดต่อเพื่อส่งเอกสารแคตตาล็อกเครื่องกรองน้ำมันอุตสาหกรรมและฟื้นฟูน้ำยาหล่อเย็นสำหรับโรงงานครับ
+
+หากท่านสะดวกรับข้อมูลผ่านอีเมลนี้ สามารถตอบกลับได้เลยครับ ทางเราจะจัดส่งไฟล์แคตตาล็อกและสเปกเครื่องจักรให้พิจารณาครับ
+
+ขอแสดงความนับถือ,
+เอกชัย หาบ้านแท่น (แม็ก)
+โทร: 092-479-7666
+บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
+      };
     } else {
       return {
-        subject: `[ประสานงานฝ่ายจัดซื้อ/ซ่อมบำรุง] โซลูชันฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น - ${custName}`,
+        subject: `[ข้อมูลผลิตภัณฑ์] โซลูชันเครื่องกรองน้ำมันและฟื้นฟูน้ำยาหล่อเย็น - ${custName}`,
         body: `เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง ${custName}
 
-CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่องจักรอัจฉริยะสำหรับฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น" เพื่อช่วยลดต้นทุนการซื้อน้ำมันใหม่ได้สูงสุดถึง 70%
+CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่องจักรอัจฉริยะสำหรับฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น":
 
-1. เครื่องกรองน้ำมัน (กระบอกคู่) รุ่น LYJ-001-D (82,000 บาท)
-2. เครื่องกรองน้ำมัน (กระบอกเดี่ยว) รุ่น LYJ-001-S (65,000 บาท)
-3. เครื่องกำจัดตะกรัน รุ่น NXC-QZJ-116A (82,000 บาท)
-4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100 (เริ่มต้น 175,000 บาท)
+1. เครื่องกรองน้ำมัน (กระบอกคู่) รุ่น LYJ-001-D
+2. เครื่องกรองน้ำมัน (กระบอกเดี่ยว) รุ่น LYJ-001-S
+3. เครื่องกำจัดตะกรัน รุ่น NXC-QZJ-116A
+4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100
 
-[ บริการพิเศษ ] ยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานให้ทดลองใช้งานฟรี (Demo On-site) ถึงหน้างานจริง
+บริการพิเศษ: ยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานให้ทดลองใช้งานฟรี (Demo On-site) ถึงหน้างานจริง
 
 ขอแสดงความนับถือ,
 เอกชัย หาบ้านแท่น (แม็ก) 092-479-7666
@@ -511,49 +503,54 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => setTemplateType("safe_nolink")}
-                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
-                  templateType === "safe_nolink"
-                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
+                onClick={() => setTemplateType("formal")}
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center justify-center text-center border ${
+                  templateType === "formal"
+                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs ring-1 ring-teal-600"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>🛡️ ปลอดภัย (ไร้ลิงก์)</span>
+                <span>🛡️ ทางการ</span>
+                <span className="text-[9px] opacity-75 font-medium">ไร้ลิงก์/กัน Spam</span>
               </button>
               <button
                 type="button"
-                onClick={() => setTemplateType("formal")}
-                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
-                  templateType === "formal"
-                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
+                onClick={() => setTemplateType("concise")}
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center justify-center text-center border ${
+                  templateType === "concise"
+                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs ring-1 ring-teal-600"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>📄 ทางการ</span>
+                <span>💬 สั้น กระชับ</span>
+                <span className="text-[9px] opacity-75 font-medium">เปิดบทสนทนา</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTemplateType("standard")}
-                className={`px-2 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center space-x-1 border text-center ${
+                className={`px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center justify-center text-center border ${
                   templateType === "standard"
-                    ? "bg-teal-50 border-teal-600 text-teal-900 shadow-xs"
+                    ? "bg-teal-50 border-teal-600 text-teal-800 shadow-xs ring-1 ring-teal-600"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>⚡ โปรโมชั่น</span>
+                <span>⚡ สินค้าหลัก</span>
+                <span className="text-[9px] opacity-75 font-medium">รุ่นเครื่องจักร</span>
               </button>
             </div>
-            {templateType === "safe_nolink" ? (
-              <p className="text-[10px] text-teal-800 font-semibold">
-                🛡️ ตัดลิงก์ภายนอกออกทั้งหมด เพื่อไม่ให้ระบบ AI ของ Gmail สงสัยว่าเป็นฟิชชิ่ง ส่งผ่านได้ง่ายที่สุด
-              </p>
-            ) : templateType === "formal" ? (
+            {templateType === "formal" && (
               <p className="text-[10px] text-teal-700 font-medium">
-                ✅ ข้อความทางการ สุภาพ สำหรับแนะนำสินค้าและบริการ
+                ✅ เหมาะสำหรับส่งหาอีเมลกลาง (@gmail.com) แบบเป็นทางการ ปลอดภัยจากตัวกรองความปลอดภัย
               </p>
-            ) : (
-              <p className="text-[10px] text-amber-700 font-medium">
-                ⚠️ มีคำว่า &quot;ลดต้นทุน 70%&quot; และราคา เหมาะกับลูกค้าที่เคยติดต่อกันแล้ว
+            )}
+            {templateType === "concise" && (
+              <p className="text-[10px] text-teal-700 font-medium">
+                ✅ ข้อความสั้น ขออนุญาตส่งไฟล์ PDF เพิ่มเติม อัตราการเปิดอ่านและตอบกลับสูง
+              </p>
+            )}
+            {templateType === "standard" && (
+              <p className="text-[10px] text-slate-600 font-medium">
+                💡 สรุปรุ่นเครื่องจักรหลัก 4 รายการครบถ้วน
               </p>
             )}
           </div>
