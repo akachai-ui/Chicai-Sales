@@ -280,14 +280,23 @@ export default function CustomerMapInner({
     return calculateRouteStats(todayPlan.stops);
   }, [todayPlan.stops]);
 
-  const handleAddFactoryToPlan = (fact: UnifiedFactory) => {
+  const handleAddFactoryToPlan = (fact: UnifiedFactory, targetDate?: string) => {
+    const dStr = targetDate || new Date().toISOString().split('T')[0];
     const cust: Customer = getCustomerFromFactory(fact);
-    const res = addCustomerToDailyPlan(cust);
-    setTodayPlan(res.plan);
+    const res = addCustomerToDailyPlan(cust, dStr);
+    
+    if (dStr === new Date().toISOString().split('T')[0]) {
+      setTodayPlan(res.plan);
+    }
+
+    const isTodayD = dStr === new Date().toISOString().split('T')[0];
+    const isTomorrowD = dStr === new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    const dateLabel = isTodayD ? 'วันนี้' : isTomorrowD ? 'พรุ่งนี้' : `วันที่ ${dStr}`;
+
     if (res.isDuplicate) {
-      setPlanToastMsg(`⚠️ ${fact.name} อยู่ในแผนงานวันนี้แล้ว`);
+      setPlanToastMsg(`⚠️ ${fact.name} อยู่ในแผนงาน (${dateLabel}) แล้ว`);
     } else {
-      setPlanToastMsg(`✅ เพิ่ม ${fact.name} เป็นจุดหมายที่ #${res.plan.stops.length} ในแผนงานวันนี้แล้ว`);
+      setPlanToastMsg(`✅ เพิ่ม ${fact.name} เป็นจุดหมายที่ #${res.plan.stops.length} ในแผนงาน (${dateLabel}) แล้ว`);
     }
     setTimeout(() => setPlanToastMsg(null), 3500);
   };
@@ -1284,23 +1293,45 @@ function normalizeDistrictName(raw?: string | null): string {
                 </button>
               </div>
 
-              {/* Add to Today's Route Button */}
-              <button
-                type="button"
-                onClick={() => handleAddFactoryToPlan(selectedFactory)}
-                className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow-xs active:scale-[0.98] ${
-                  isAlreadyInPlan
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 text-white shadow-blue-600/20'
-                }`}
-              >
-                <Car className="w-3.5 h-3.5" />
-                <span>
-                  {isAlreadyInPlan
-                    ? `✓ อยู่ในแผนงานวันนี้แล้ว (จุดที่ #${plannedIndex + 1})`
-                    : `🚗 เพิ่มลงแผนงานวันนี้ (+ Add to Route)`}
-                </span>
-              </button>
+              {/* Add to Route / Advance Planning Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAddFactoryToPlan(selectedFactory, new Date().toISOString().split('T')[0])}
+                  className={`py-2 px-2 rounded-xl font-bold text-[11px] flex items-center justify-center space-x-1 transition-all shadow-xs active:scale-[0.98] ${
+                    isAlreadyInPlan
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <span>🚗</span>
+                  <span>{isAlreadyInPlan ? `✓ อยู่ในแผนวันนี้ (#${plannedIndex + 1})` : '+ แผนวันนี้'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    handleAddFactoryToPlan(selectedFactory, d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-xs transition-all active:scale-[0.98] flex items-center justify-center space-x-1"
+                >
+                  <span>⏩</span>
+                  <span>+ แผนพรุ่งนี้</span>
+                </button>
+                <label className="relative col-span-2 sm:col-span-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200 transition-all flex items-center justify-center space-x-1 cursor-pointer">
+                  <span>📅</span>
+                  <span>เลือกวันอื่น...</span>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      if (e.target.value) handleAddFactoryToPlan(selectedFactory, e.target.value);
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </label>
+              </div>
 
               {/* Quick Action Buttons */}
               <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">

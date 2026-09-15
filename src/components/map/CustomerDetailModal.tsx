@@ -77,12 +77,17 @@ export default function CustomerDetailModal({
   // Daily Plan State
   const [addedToPlanMsg, setAddedToPlanMsg] = useState<string | null>(null);
 
-  const handleAddToDailyPlan = () => {
-    const res = addCustomerToDailyPlan(customer);
+  const handleAddToDailyPlan = (targetDate?: string) => {
+    const dStr = targetDate || new Date().toISOString().split('T')[0];
+    const res = addCustomerToDailyPlan(customer, dStr);
+    const isTodayD = dStr === new Date().toISOString().split('T')[0];
+    const isTomorrowD = dStr === new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    const dateLabel = isTodayD ? 'วันนี้' : isTomorrowD ? 'พรุ่งนี้' : `วันที่ ${dStr}`;
+
     if (res.isDuplicate) {
-      setAddedToPlanMsg('⚠️ บริษัทนี้อยู่ในแผนงานวันนี้อยู่แล้ว');
+      setAddedToPlanMsg(`⚠️ บริษัทนี้อยู่ในแผนงาน (${dateLabel}) อยู่แล้ว`);
     } else {
-      setAddedToPlanMsg('✅ เพิ่มเข้าแผนการทำงานประจำวันเรียบร้อยแล้ว');
+      setAddedToPlanMsg(`✅ เพิ่มเข้าแผนงาน (${dateLabel}) เรียบร้อยแล้ว`);
     }
     setTimeout(() => setAddedToPlanMsg(null), 3500);
   };
@@ -431,15 +436,39 @@ export default function CustomerDetailModal({
                 </div>
               )}
 
-              <div className="flex items-center space-x-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 <button
                   type="button"
-                  onClick={handleAddToDailyPlan}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-xs shadow-sm shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center space-x-1.5"
+                  onClick={() => handleAddToDailyPlan(new Date().toISOString().split('T')[0])}
+                  className="py-2 px-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] sm:text-xs shadow-xs transition-all active:scale-[0.98] flex items-center justify-center space-x-1"
                 >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>🚗 เพิ่มลงแผนงานวันนี้ (Daily Planner)</span>
+                  <span>🚗</span>
+                  <span>+ แผนวันนี้</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    handleAddToDailyPlan(d.toISOString().split('T')[0]);
+                  }}
+                  className="py-2 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] sm:text-xs shadow-xs transition-all active:scale-[0.98] flex items-center justify-center space-x-1"
+                >
+                  <span>⏩</span>
+                  <span>+ แผนพรุ่งนี้</span>
+                </button>
+                <label className="relative col-span-2 sm:col-span-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] sm:text-xs border border-slate-200 transition-all flex items-center justify-center space-x-1 cursor-pointer">
+                  <span>📅</span>
+                  <span>เลือกวันอื่น...</span>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      if (e.target.value) handleAddToDailyPlan(e.target.value);
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </label>
               </div>
             </div>
 

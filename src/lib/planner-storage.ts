@@ -117,6 +117,56 @@ export function formatThaiFullDate(dateStr: string): string {
   }
 }
 
+// Format short Thai date, e.g. "อ. 15 ก.ย."
+export function formatThaiShortDate(dateStr: string): string {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    const shortDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+    const shortMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${shortDays[d.getDay()]} ${day} ${shortMonths[month - 1]}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+export interface UpcomingDayPlanSummary {
+  date: string;
+  thaiLabel: string;
+  stopsCount: number;
+  completedCount: number;
+  provinces: string[];
+}
+
+// Get overview of all scheduled plans in upcoming days (e.g. next 14 days)
+export function getUpcomingPlansSummary(startDateStr?: string, daysCount: number = 14): UpcomingDayPlanSummary[] {
+  if (typeof window === 'undefined') return [];
+  const base = startDateStr ? new Date(startDateStr) : new Date();
+  const result: UpcomingDayPlanSummary[] = [];
+
+  for (let i = 0; i < daysCount; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const plan = getDailyPlan(dateStr);
+
+    if (plan.stops && plan.stops.length > 0) {
+      const provinces = Array.from(new Set(plan.stops.map((s) => s.province).filter(Boolean))) as string[];
+      const completedCount = plan.stops.filter((s) => s.status === 'COMPLETED').length;
+
+      result.push({
+        date: dateStr,
+        thaiLabel: formatThaiShortDate(dateStr),
+        stopsCount: plan.stops.length,
+        completedCount,
+        provinces,
+      });
+    }
+  }
+
+  return result;
+}
+
 // Generate Google Maps Multi-Stop Directions URL
 export function generateMultiStopGoogleMapsUrl(stops: PlannedStop[]): string | null {
   if (!stops || stops.length === 0) return null;
