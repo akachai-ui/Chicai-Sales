@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AddStopModal from '@/components/planner/AddStopModal';
+import DailyReportModal from '@/components/planner/DailyReportModal';
 import { DailyPlan, PlannedStop, VISIT_STATUS_CONFIG, VisitStatus } from '@/types/planner';
 import {
   getDailyPlan,
@@ -80,6 +81,7 @@ export default function PlannerPage() {
 
   // Modal & Preview States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [copiedType, setCopiedType] = useState<'morning' | 'evening' | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState<string>('');
@@ -577,8 +579,18 @@ export default function PlannerPage() {
               </p>
             </div>
 
-            {/* Multi-stop Route Button & Map Toggle */}
-            <div className="flex items-center space-x-2 shrink-0">
+            {/* Action Buttons: Report Hub, Map Toggle, Multi-stop */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 shrink-0"
+                title="เปิดศูนย์ออกรายงานสรุปการปฏิบัติงาน (PDF, LINE, แบบฟอร์มทางการ)"
+              >
+                <span>📑</span>
+                <span>ออกรายงานสรุปส่งหัวหน้า</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setShowMap(!showMap)}
@@ -589,7 +601,7 @@ export default function PlannerPage() {
                 }`}
               >
                 <Compass className="w-3.5 h-3.5" />
-                <span>{showMap ? 'ซ่อนแผนที่เส้นทาง' : '🗺️ ดูแผนที่เส้นทาง'}</span>
+                <span>{showMap ? 'ซ่อนแผนที่' : '🗺️ แผนที่เส้นทาง'}</span>
               </button>
 
               {multiStopMapUrl && (
@@ -600,7 +612,7 @@ export default function PlannerPage() {
                   className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all active:scale-95 shrink-0"
                 >
                   <Navigation className="w-3.5 h-3.5" />
-                  <span>เปิด Google Maps รวม</span>
+                  <span>Google Maps รวม</span>
                 </a>
               )}
             </div>
@@ -958,6 +970,14 @@ export default function PlannerPage() {
         onClose={() => setIsAddModalOpen(false)}
         onAddStop={handleAddStop}
         existingCustomerIds={plan.stops.map((s) => s.customerId).filter(Boolean) as number[]}
+      />
+
+      {/* Daily Report Generator Modal */}
+      <DailyReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        plan={plan}
+        selectedDate={selectedDate}
       />
 
       {/* Preview Message Modal */}

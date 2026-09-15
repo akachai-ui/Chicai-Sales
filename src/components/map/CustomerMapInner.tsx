@@ -6,6 +6,7 @@ import { fetchAllCustomers, subscribeToRealtimeChanges, supabase } from '@/lib/s
 import CustomerDetailModal from './CustomerDetailModal';
 import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
+import DailyReportModal from '@/components/planner/DailyReportModal';
 import { generateDistrictZones, DistrictZone } from '@/lib/geo';
 import { getDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
 import Supercluster from 'supercluster';
@@ -305,6 +306,7 @@ export default function CustomerMapInner({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
 
   // Map DOM and Leaflet instance references
@@ -1375,6 +1377,16 @@ function normalizeDistrictName(raw?: string | null): string {
 
         {/* Floating Today's Route Pill at top-right */}
         <div className="absolute top-3.5 right-14 sm:right-16 z-30 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          <button
+            type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 touch-press"
+            title="ออกรายงานสรุปการปฏิบัติงานส่งหัวหน้า (PDF / LINE / พิมพ์)"
+          >
+            <span>📑</span>
+            <span className="hidden sm:inline">ออกรายงาน</span>
+          </button>
+
           {todayPlan.stops.length > 0 && (
             <button
               type="button"
@@ -1852,6 +1864,14 @@ function normalizeDistrictName(raw?: string | null): string {
             handleSaveAndSyncCustomer(updatedCust);
           }
         }}
+      />
+
+      {/* Daily Report Generator Modal */}
+      <DailyReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        plan={todayPlan}
+        selectedDate={new Date().toISOString().split('T')[0]}
       />
     </div>
   );
