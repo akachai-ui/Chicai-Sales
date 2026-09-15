@@ -313,6 +313,7 @@ export default function CustomerMapInner({
   const markersLayerRef = useRef<any>(null);
   const selectedMarkerLayerRef = useRef<any>(null);
   const zonesLayerRef = useRef<any>(null);
+  const routePolylinesLayerRef = useRef<any>(null);
   const superclusterRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
 
@@ -716,12 +717,17 @@ function normalizeDistrictName(raw?: string | null): string {
             (factory.activities_count !== undefined && factory.activities_count > 0) ||
             (factory.pipeline_stage && factory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
+          const planIndex = todayPlan.stops.findIndex(
+            (s) => (s.customerId && s.customerId === factory.crm_id) || s.companyName === factory.name
+          );
+          const isInPlan = planIndex !== -1;
+
           const popupContent = `
-            <div style="font-family: inherit; min-width: 230px; max-width: 290px; padding: 2px;">
-              <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 2px;">
+            <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
                 📍 ${factory.district || 'สมุทรปราการ'}
               </div>
-              <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
+              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
                 ${factory.name}
               </div>
               <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
@@ -731,13 +737,16 @@ function normalizeDistrictName(raw?: string | null): string {
                 ${factory.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${factory.activities_count} กิจกรรม</span>` : ''}
               </div>
               ${factory.phone ? `
-                <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">
+                <div style="font-size: 12px; color: #475569; margin-bottom: 6px;">
                   📞 <b>${factory.phone}</b>
                 </div>
               ` : ''}
-              <div style="display: flex; gap: 6px; margin-top: 6px;">
-                <button id="btn-popup-details-${factory.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
-                  ดูรายละเอียด & บันทึกงานขาย
+              <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 4px;">
+                <button id="btn-popup-plan-${factory.id}" style="width: 100%; padding: 7px 10px; background: ${isInPlan ? '#ecfdf5' : 'linear-gradient(135deg, #2563eb, #4f46e5)'}; color: ${isInPlan ? '#065f46' : '#ffffff'}; border: ${isInPlan ? '1.5px solid #34d399' : 'none'}; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.12);">
+                  ${isInPlan ? `✓ อยู่ในแผนงานแล้ว (จุดที่ #${planIndex + 1})` : `🚗 + เพิ่มเข้าแผนงาน`}
+                </button>
+                <button id="btn-popup-details-${factory.id}" style="width: 100%; padding: 5px 10px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                  ดูรายละเอียด & บันทึกงานขาย ➔
                 </button>
               </div>
             </div>
@@ -751,11 +760,22 @@ function normalizeDistrictName(raw?: string | null): string {
 
           marker.on('popupopen', () => {
             setSelectedFactory(factory);
-            const btn = document.getElementById(`btn-popup-details-${factory.id}`);
-            if (btn) {
-              btn.onclick = () => {
+            const btnDetails = document.getElementById(`btn-popup-details-${factory.id}`);
+            if (btnDetails) {
+              btnDetails.onclick = () => {
                 setSelectedFactory(factory);
                 setIsDetailModalOpen(true);
+              };
+            }
+            const btnPlan = document.getElementById(`btn-popup-plan-${factory.id}`);
+            if (btnPlan) {
+              btnPlan.onclick = (e) => {
+                e.stopPropagation();
+                handleAddFactoryToPlan(factory);
+                btnPlan.style.background = '#ecfdf5';
+                btnPlan.style.color = '#065f46';
+                btnPlan.style.border = '1.5px solid #34d399';
+                btnPlan.innerText = '✓ เพิ่มเข้าแผนงานแล้ว!';
               };
             }
           });
@@ -764,7 +784,7 @@ function normalizeDistrictName(raw?: string | null): string {
         }
       });
     });
-  }, [selectedFactory, flyToFactory]);
+  }, [selectedFactory, flyToFactory, todayPlan]);
 
   // Dedicated Highlight Layer for Selected Factory
   useEffect(() => {
@@ -794,12 +814,17 @@ function normalizeDistrictName(raw?: string | null): string {
         (selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
         (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
+      const planIndex = todayPlan.stops.findIndex(
+        (s) => (s.customerId && s.customerId === selectedFactory.crm_id) || s.companyName === selectedFactory.name
+      );
+      const isInPlan = planIndex !== -1;
+
       const popupContent = `
-        <div style="font-family: inherit; min-width: 230px; max-width: 290px; padding: 2px;">
-          <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 2px;">
+        <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
             📍 ${selectedFactory.district || 'สมุทรปราการ'}
           </div>
-          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
             ${selectedFactory.name}
           </div>
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
@@ -809,13 +834,16 @@ function normalizeDistrictName(raw?: string | null): string {
             ${selectedFactory.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${selectedFactory.activities_count} กิจกรรม</span>` : ''}
           </div>
           ${selectedFactory.phone ? `
-            <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">
+            <div style="font-size: 12px; color: #475569; margin-bottom: 6px;">
               📞 <b>${selectedFactory.phone}</b>
             </div>
           ` : ''}
-          <div style="display: flex; gap: 6px; margin-top: 6px;">
-            <button id="btn-details-selected-${selectedFactory.id}" style="flex: 1; padding: 6px 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
-              ดูรายละเอียด & บันทึกงานขาย
+          <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 4px;">
+            <button id="btn-details-selected-plan-${selectedFactory.id}" style="width: 100%; padding: 7px 10px; background: ${isInPlan ? '#ecfdf5' : 'linear-gradient(135deg, #2563eb, #4f46e5)'}; color: ${isInPlan ? '#065f46' : '#ffffff'}; border: ${isInPlan ? '1.5px solid #34d399' : 'none'}; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.12);">
+              ${isInPlan ? `✓ อยู่ในแผนงานแล้ว (จุดที่ #${planIndex + 1})` : `🚗 + เพิ่มเข้าแผนงาน`}
+            </button>
+            <button id="btn-details-selected-${selectedFactory.id}" style="width: 100%; padding: 5px 10px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+              ดูรายละเอียด & บันทึกงานขาย ➔
             </button>
           </div>
         </div>
@@ -829,6 +857,17 @@ function normalizeDistrictName(raw?: string | null): string {
             setIsDetailModalOpen(true);
           };
         }
+        const btnPlan = document.getElementById(`btn-details-selected-plan-${selectedFactory.id}`);
+        if (btnPlan) {
+          btnPlan.onclick = (e) => {
+            e.stopPropagation();
+            handleAddFactoryToPlan(selectedFactory);
+            btnPlan.style.background = '#ecfdf5';
+            btnPlan.style.color = '#065f46';
+            btnPlan.style.border = '1.5px solid #34d399';
+            btnPlan.innerText = '✓ เพิ่มเข้าแผนงานแล้ว!';
+          };
+        }
       });
 
       layer.addLayer(marker);
@@ -836,7 +875,7 @@ function normalizeDistrictName(raw?: string | null): string {
         marker.openPopup();
       }
     });
-  }, [selectedFactory]);
+  }, [selectedFactory, todayPlan]);
 
   // Draw or clear District Zones
   const renderDistrictZones = useCallback(() => {
@@ -888,6 +927,128 @@ function normalizeDistrictName(raw?: string | null): string {
     });
   }, [districtZones, showZones]);
 
+  // Draw connecting Route Polylines & Numbered Stop Badges on Map
+  useEffect(() => {
+    if (!mapInstanceRef.current || !routePolylinesLayerRef.current) return;
+
+    import('leaflet').then((leaflet) => {
+      const L = leaflet.default || leaflet;
+      const layer = routePolylinesLayerRef.current;
+      layer.clearLayers();
+
+      const validStops = todayPlan.stops.filter(
+        (s) => s.latitude && s.longitude && !isNaN(s.latitude) && !isNaN(s.longitude)
+      );
+
+      if (validStops.length === 0) return;
+
+      const latLngs: [number, number][] = validStops.map((s) => [s.latitude!, s.longitude!]);
+
+      // 1. Draw Connecting Polyline if >= 2 stops
+      if (latLngs.length > 1) {
+        // Glow polyline
+        L.polyline(latLngs, {
+          color: '#818cf8',
+          weight: 8,
+          opacity: 0.45,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(layer);
+
+        // Main vibrant dashed polyline
+        L.polyline(latLngs, {
+          color: '#2563eb',
+          weight: 4,
+          opacity: 0.95,
+          dashArray: '8, 8',
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(layer);
+
+        // Mid-point distance badges
+        for (let i = 0; i < validStops.length - 1; i++) {
+          const from = validStops[i];
+          const to = validStops[i + 1];
+          const distKm = calculateDistanceKm(from.latitude, from.longitude, to.latitude, to.longitude);
+
+          if (distKm !== null) {
+            const midLat = (from.latitude! + to.latitude!) / 2;
+            const midLng = (from.longitude! + to.longitude!) / 2;
+            const timeMin = estimateDrivingTimeMinutes(distKm);
+
+            const distanceIcon = L.divIcon({
+              className: 'map-route-dist-badge',
+              html: `
+                <div style="
+                  background: #0f172a;
+                  color: #ffffff;
+                  padding: 2.5px 8px;
+                  border-radius: 9999px;
+                  font-size: 10px;
+                  font-weight: 800;
+                  white-space: nowrap;
+                  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+                  border: 1.5px solid #60a5fa;
+                  display: flex;
+                  align-items: center;
+                  gap: 3px;
+                  pointer-events: none;
+                  transform: translate(-50%, -50%);
+                ">
+                  <span>🚗 ${formatDistanceThai(distKm)}</span>
+                  ${timeMin ? `<span style="color: #93c5fd; font-size: 9px;">(${timeMin}น.)</span>` : ''}
+                </div>
+              `,
+              iconSize: [0, 0],
+            });
+
+            L.marker([midLat, midLng], { icon: distanceIcon }).addTo(layer);
+          }
+        }
+      }
+
+      // 2. Draw Numbered Stop Pin Overlays (#1, #2, #3...)
+      validStops.forEach((stop, index) => {
+        const num = index + 1;
+        const isCompleted = stop.status === 'COMPLETED';
+        const isInProgress = stop.status === 'IN_PROGRESS';
+        const badgeBg = isCompleted ? '#059669' : isInProgress ? '#2563eb' : '#4f46e5';
+
+        const stopBadgeIcon = L.divIcon({
+          className: 'map-route-stop-numbered-pin',
+          html: `
+            <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+              <div style="position: absolute; inset: -4px; border-radius: 9999px; background: ${badgeBg}; opacity: 0.35; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
+              <div style="
+                width: 26px;
+                height: 26px;
+                border-radius: 9999px;
+                background: ${badgeBg};
+                color: #ffffff;
+                font-size: 13px;
+                font-weight: 900;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 2.5px solid #ffffff;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+              ">
+                ${num}
+              </div>
+            </div>
+          `,
+          iconSize: [34, 34],
+          iconAnchor: [17, 44],
+        });
+
+        L.marker([stop.latitude!, stop.longitude!], {
+          icon: stopBadgeIcon,
+          zIndexOffset: 60000 + index,
+        }).addTo(layer);
+      });
+    });
+  }, [todayPlan]);
+
   // Initialize Leaflet Map
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
@@ -913,10 +1074,12 @@ function normalizeDistrictName(raw?: string | null): string {
       }).addTo(map);
 
       const zonesGroup = L.layerGroup().addTo(map);
+      const routePolylinesGroup = L.layerGroup().addTo(map);
       const markersGroup = L.layerGroup().addTo(map);
       const selectedGroup = L.layerGroup().addTo(map);
 
       zonesLayerRef.current = zonesGroup;
+      routePolylinesLayerRef.current = routePolylinesGroup;
       markersLayerRef.current = markersGroup;
       selectedMarkerLayerRef.current = selectedGroup;
       mapInstanceRef.current = map;
@@ -1207,7 +1370,28 @@ function normalizeDistrictName(raw?: string | null): string {
         </div>
 
         {/* Floating Today's Route Pill at top-right */}
-        <div className="absolute top-3.5 right-14 sm:right-16 z-30 flex items-center space-x-2 animate-in fade-in duration-200">
+        <div className="absolute top-3.5 right-14 sm:right-16 z-30 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          {todayPlan.stops.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const valid = todayPlan.stops.filter((s) => s.latitude && s.longitude);
+                if (valid.length > 0 && mapInstanceRef.current) {
+                  import('leaflet').then((leaflet) => {
+                    const L = leaflet.default || leaflet;
+                    const bounds = L.latLngBounds(valid.map((s) => [s.latitude!, s.longitude!]));
+                    mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+                  });
+                }
+              }}
+              className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-white/95 backdrop-blur-md hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-md border border-slate-200/90 transition-all active:scale-95 touch-press"
+              title="ซูมแสดงเส้นทางและจุดหมายทั้งหมดบนแผนที่"
+            >
+              <span>🧭</span>
+              <span className="hidden sm:inline">ดูเส้นทาง</span>
+            </button>
+          )}
+
           <Link
             href="/planner"
             className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs shadow-lg shadow-blue-600/30 hover:shadow-xl transition-all active:scale-95 touch-press"
