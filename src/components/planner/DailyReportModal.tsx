@@ -49,7 +49,7 @@ export default function DailyReportModal({
   plan,
   selectedDate,
 }: DailyReportModalProps) {
-  const [reportType, setReportType] = useState<'evening' | 'morning' | 'official'>('evening');
+  const [reportType, setReportType] = useState<'morning' | 'evening' | 'official'>('morning');
   const [copied, setCopied] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [executiveNote, setExecutiveNote] = useState('');
@@ -58,7 +58,7 @@ export default function DailyReportModal({
   const handleExportExcel = () => {
     setDownloadingExcel(true);
     try {
-      exportDailyPlanToExcel(plan, executiveNote);
+      exportDailyPlanToExcel(plan, executiveNote, reportType === 'morning' ? 'plan' : 'result');
     } catch (err: any) {
       alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message);
     } finally {
@@ -93,8 +93,12 @@ export default function DailyReportModal({
 
     if (executiveNote.trim()) {
       base = base.replace(
+        '------------------------------------\nCHICAI ELECTRIC',
+        `📝 หมายเหตุ / สรุปภาพรวมแผนงาน:\n${executiveNote.trim()}\n\n------------------------------------\nCHICAI ELECTRIC`
+      );
+      base = base.replace(
         '------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ',
-        `📝 สรุปภาพรวมและประเด็นสำคัญ:\n${executiveNote.trim()}\n\n------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ`
+        `📝 หมายเหตุ / สรุปภาพรวมแผนงาน:\n${executiveNote.trim()}\n\n------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ`
       );
     }
     return base;
@@ -115,8 +119,8 @@ export default function DailyReportModal({
   const handleShare = async () => {
     const title =
       reportType === 'morning'
-        ? `แผนงานประจำวัน (${formatThaiFullDate(selectedDate)})`
-        : `สรุปผลการปฏิบัติงาน (${formatThaiFullDate(selectedDate)})`;
+        ? `รายงานแผนการปฏิบัติงาน (${formatThaiFullDate(selectedDate)})`
+        : `รายงานสรุปผลการปฏิบัติงาน (${formatThaiFullDate(selectedDate)})`;
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -152,10 +156,10 @@ export default function DailyReportModal({
               <div>
                 <div className="flex items-center space-x-2">
                   <h3 className="font-extrabold text-base sm:text-lg text-white tracking-tight">
-                    ศูนย์ออกรายงานสรุปการปฏิบัติงาน
+                    ศูนย์ออกรายงานแผนงาน & สรุปผล
                   </h3>
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    Report Center
+                    Plan & Report Hub
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
@@ -175,18 +179,6 @@ export default function DailyReportModal({
           <div className="flex bg-white/10 p-1 rounded-xl mt-3 text-xs font-bold gap-1">
             <button
               type="button"
-              onClick={() => setReportType('evening')}
-              className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
-                reportType === 'evening'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <span>📊</span>
-              <span>สรุปผลช่วงเย็น (End of Day)</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setReportType('morning')}
               className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
                 reportType === 'morning'
@@ -195,7 +187,19 @@ export default function DailyReportModal({
               }`}
             >
               <span>📋</span>
-              <span>แผนงานช่วงเช้า (Morning)</span>
+              <span>รายงานแผนงาน (Work Plan)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportType('evening')}
+              className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
+                reportType === 'evening'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <span>📊</span>
+              <span>รายงานสรุปผล (End of Day)</span>
             </button>
             <button
               type="button"
@@ -207,7 +211,7 @@ export default function DailyReportModal({
               }`}
             >
               <span>📑</span>
-              <span>ฟอร์มรายงานทางการ (PDF/พิมพ์)</span>
+              <span>ฟอร์มแผนงานทางการ (PDF/พิมพ์)</span>
             </button>
           </div>
         </div>
@@ -269,14 +273,14 @@ export default function DailyReportModal({
                     CHICAI ELECTRIC (THAILAND) CO., LTD.
                   </h2>
                   <p className="text-[11px] text-slate-600 font-bold">
-                    รายงานการปฏิบัติงานและบันทึกการเข้าพบลูกค้าประจำวัน (Daily Sales & Field Visit Report)
+                    รายงานแผนการปฏิบัติงานและเส้นทางการเข้าพบลูกค้าประจำวัน (Daily Route & Visit Plan Report)
                   </p>
                 </div>
                 <div className="text-right text-xs">
                   <p className="font-extrabold text-slate-900">
                     วันที่: <b>{formatThaiFullDate(selectedDate)}</b>
                   </p>
-                  <p className="text-[11px] text-slate-500">ผู้รายงาน: {plan.salesPersonName}</p>
+                  <p className="text-[11px] text-slate-500">ผู้ปฏิบัติงาน: {plan.salesPersonName}</p>
                 </div>
               </div>
 
