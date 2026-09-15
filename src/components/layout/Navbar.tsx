@@ -9,7 +9,9 @@ import {
   LayoutDashboard,
   Layers,
   Sparkles,
-  Plus
+  Plus,
+  Navigation,
+  CalendarCheck
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -18,9 +20,10 @@ export default function Navbar() {
   const navItems = [
     { name: 'หน้าหลัก', href: '/', icon: LayoutDashboard, label: 'หน้าหลัก' },
     { name: 'แผนที่', href: '/map', icon: MapPin, label: 'แผนที่' },
-    { name: 'ค้นหาคลัง DBD', href: '/dbd-leads', icon: Sparkles, label: 'คลัง DBD' },
-    { name: 'รายชื่อลูกค้า', href: '/customers', icon: Users, label: 'ลูกค้า' },
-    { name: 'ประวัติเข้าพบ', href: '/activities', icon: Layers, label: 'กิจกรรม' },
+    { name: 'วางแผนงาน', href: '/planner', icon: Navigation, label: 'แผนงาน' },
+    { name: 'ค้นหา DBD', href: '/dbd-leads', icon: Sparkles, label: 'คลัง DBD' },
+    { name: 'ลูกค้า', href: '/customers', icon: Users, label: 'ลูกค้า' },
+    { name: 'ประวัติ', href: '/activities', icon: Layers, label: 'กิจกรรม' },
   ];
 
   const isMapPage = pathname === '/map';
@@ -104,7 +107,7 @@ export default function Navbar() {
 
       {/* 3. Mobile Bottom Navigation Tab Bar (iOS / Android Native Style) */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 safe-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <nav className="grid grid-cols-5 h-14 items-center px-1">
+        <nav className="grid grid-cols-6 h-14 items-center px-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -117,14 +120,14 @@ export default function Navbar() {
                 }`}
               >
                 <div
-                  className={`w-10 h-7 flex items-center justify-center rounded-full transition-all ${
+                  className={`w-9 h-6 flex items-center justify-center rounded-full transition-all ${
                     isActive ? 'bg-blue-100 text-blue-700 scale-105' : 'text-slate-500'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                 </div>
                 <span
-                  className={`text-[10px] font-bold tracking-tight mt-0.5 ${
+                  className={`text-[9.5px] font-bold tracking-tight mt-0.5 truncate max-w-[50px] ${
                     isActive ? 'text-blue-700 font-extrabold' : 'text-slate-500'
                   }`}
                 >

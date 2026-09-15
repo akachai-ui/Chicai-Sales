@@ -12,6 +12,7 @@ import {
   CalendarCheck,
   Building2,
   ChevronRight,
+  Navigation,
   Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,11 @@ const navItems = [
     label: 'ภาพรวม (Dashboard)',
     href: '/',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'วางแผนงาน (Daily Planner)',
+    href: '/planner',
+    icon: Navigation,
   },
   {
     label: 'กระดานขาย (Pipeline)',

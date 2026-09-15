@@ -33,8 +33,10 @@ import {
   ArrowRight,
   Edit,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Navigation,
 } from 'lucide-react';
+import { addCustomerToDailyPlan } from '@/lib/planner-storage';
 
 interface CustomerDetailModalProps {
   customer: Customer | null;
@@ -71,6 +73,19 @@ export default function CustomerDetailModal({
 
   // Email Modal State
   const [showEmailModal, setShowEmailModal] = useState(false);
+
+  // Daily Plan State
+  const [addedToPlanMsg, setAddedToPlanMsg] = useState<string | null>(null);
+
+  const handleAddToDailyPlan = () => {
+    const res = addCustomerToDailyPlan(customer);
+    if (res.isDuplicate) {
+      setAddedToPlanMsg('⚠️ บริษัทนี้อยู่ในแผนงานวันนี้อยู่แล้ว');
+    } else {
+      setAddedToPlanMsg('✅ เพิ่มเข้าแผนการทำงานประจำวันเรียบร้อยแล้ว');
+    }
+    setTimeout(() => setAddedToPlanMsg(null), 3500);
+  };
 
   // Delete Customer State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -402,12 +417,38 @@ export default function CustomerDetailModal({
               </a>
             </div>
 
+            {/* Add to Daily Plan & Feedback Toast */}
+            <div className="mt-2.5 flex flex-col space-y-2">
+              {addedToPlanMsg && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150">
+                  <span>{addedToPlanMsg}</span>
+                  <a
+                    href="/planner"
+                    className="text-blue-700 underline text-[11px] font-extrabold hover:text-blue-900 ml-2 shrink-0"
+                  >
+                    เปิดดูแผนงาน ➔
+                  </a>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={handleAddToDailyPlan}
+                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-extrabold text-xs shadow-sm shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center space-x-1.5"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>🚗 เพิ่มลงแผนงานวันนี้ (Daily Planner)</span>
+                </button>
+              </div>
+            </div>
+
             {/* DBD Quick Link */}
             <a
               href={getDbdSearchUrl(customer)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
+              className="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-bold text-slate-700 transition-colors"
               title="ดูข้อมูลนิติบุคคล DBD DataWarehouse / งบการเงิน"
             >
               <span className="flex items-center space-x-1.5 truncate">
