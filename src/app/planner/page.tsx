@@ -59,13 +59,24 @@ import {
 } from '@/lib/geo-distance';
 
 export default function PlannerPage() {
+  const [mounted, setMounted] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
 
-  const [plan, setPlan] = useState<DailyPlan>(() => getDailyPlan(new Date().toISOString().split('T')[0]));
-  const [salesName, setSalesName] = useState<string>('');
+  const [plan, setPlan] = useState<DailyPlan>({
+    date: new Date().toISOString().split('T')[0],
+    salesPersonName: 'อัครชัย (Chicai Sales)',
+    stops: [],
+    updatedAt: new Date().toISOString(),
+  });
+  const [salesName, setSalesName] = useState<string>('อัครชัย (Chicai Sales)');
   const [isEditingSalesName, setIsEditingSalesName] = useState(false);
+
+  // Set mounted true on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Modal & Preview States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -80,12 +91,13 @@ export default function PlannerPage() {
   // Map View Toggle
   const [showMap, setShowMap] = useState<boolean>(true);
 
-  // Load plan when date changes
+  // Load plan when date changes or when mounted
   useEffect(() => {
+    if (!mounted) return;
     const loaded = getDailyPlan(selectedDate);
     setPlan(loaded);
     setSalesName(loaded.salesPersonName || getSavedSalesPersonName());
-  }, [selectedDate]);
+  }, [selectedDate, mounted]);
 
   // Persist plan changes
   const updateAndSavePlan = (updatedPlan: DailyPlan) => {
@@ -431,6 +443,7 @@ export default function PlannerPage() {
 
           {/* Upcoming Schedule Carousel / Shortcut Strip */}
           {(() => {
+            if (!mounted) return null;
             const upcoming = getUpcomingPlansSummary(new Date().toISOString().split('T')[0], 14);
             if (upcoming.length === 0) return null;
 
