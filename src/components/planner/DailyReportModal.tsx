@@ -7,6 +7,7 @@ import {
   generateMorningPlanSummaryText,
   generateEveningResultSummaryText,
 } from '@/lib/planner-storage';
+import { exportDailyPlanToExcel } from '@/lib/excel-export';
 import {
   calculateRouteStats,
   formatDistanceThai,
@@ -50,8 +51,20 @@ export default function DailyReportModal({
 }: DailyReportModalProps) {
   const [reportType, setReportType] = useState<'evening' | 'morning' | 'official'>('evening');
   const [copied, setCopied] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [executiveNote, setExecutiveNote] = useState('');
   const printRef = useRef<HTMLDivElement>(null);
+
+  const handleExportExcel = () => {
+    setDownloadingExcel(true);
+    try {
+      exportDailyPlanToExcel(plan, executiveNote);
+    } catch (err: any) {
+      alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message);
+    } finally {
+      setTimeout(() => setDownloadingExcel(false), 1200);
+    }
+  };
 
   // Compute Route Stats
   const routeStats = useMemo(() => {
@@ -378,7 +391,18 @@ export default function DailyReportModal({
 
         {/* Footer Action Buttons */}
         <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={downloadingExcel}
+              className="py-2 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs border border-emerald-300 flex items-center space-x-1.5 transition-all active:scale-95 shadow-2xs"
+              title="ดาวน์โหลดรายงานสรุปเป็นไฟล์ Excel (.xlsx)"
+            >
+              <Download className="w-4 h-4 text-emerald-700" />
+              <span>{downloadingExcel ? 'กำลังสร้างไฟล์...' : '📥 ดาวน์โหลด Excel (.xlsx)'}</span>
+            </button>
+
             <button
               type="button"
               onClick={handlePrint}
