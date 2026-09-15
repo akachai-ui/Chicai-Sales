@@ -28,8 +28,19 @@ import {
   Edit,
   Navigation,
   CheckCircle2,
-  Building2
+  Building2,
+  Car,
+  Sparkles,
 } from 'lucide-react';
+import Link from 'next/link';
+import { getDailyPlan, addCustomerToDailyPlan } from '@/lib/planner-storage';
+import {
+  calculateDistanceKm,
+  formatDistanceThai,
+  calculateRouteStats,
+  formatDrivingTimeThai,
+  estimateDrivingTimeMinutes,
+} from '@/lib/geo-distance';
 
 interface UnifiedFactory {
   id: string; // 'crm_123' or 'dbd_456'
@@ -259,6 +270,27 @@ export default function CustomerMapInner({
 
   // Selected factory
   const [selectedFactory, setSelectedFactory] = useState<UnifiedFactory | null>(null);
+
+  // Daily Plan & Route States
+  const [todayPlan, setTodayPlan] = useState(() => getDailyPlan(new Date().toISOString().split('T')[0]));
+  const [planToastMsg, setPlanToastMsg] = useState<string | null>(null);
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
+
+  const todayRouteStats = useMemo(() => {
+    return calculateRouteStats(todayPlan.stops);
+  }, [todayPlan.stops]);
+
+  const handleAddFactoryToPlan = (fact: UnifiedFactory) => {
+    const cust: Customer = getCustomerFromFactory(fact);
+    const res = addCustomerToDailyPlan(cust);
+    setTodayPlan(res.plan);
+    if (res.isDuplicate) {
+      setPlanToastMsg(`⚠️ ${fact.name} อยู่ในแผนงานวันนี้แล้ว`);
+    } else {
+      setPlanToastMsg(`✅ เพิ่ม ${fact.name} เป็นจุดหมายที่ #${res.plan.stops.length} ในแผนงานวันนี้แล้ว`);
+    }
+    setTimeout(() => setPlanToastMsg(null), 3500);
+  };
 
   // Modals
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -939,6 +971,7 @@ function normalizeDistrictName(raw?: string | null): string {
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
+          setUserCoords([lat, lng]);
 
           if (mapInstanceRef.current) {
             import('leaflet').then((leaflet) => {
@@ -1164,97 +1197,179 @@ function normalizeDistrictName(raw?: string | null): string {
           </button>
         </div>
 
-        {/* Floating Selected Factory Action Card on Mobile */}
-        {selectedFactory && !showDrawer && (
-          <div className="sm:hidden fixed mobile-action-card-position left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2 max-h-[70vh] overflow-y-auto">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-0.5 min-w-0 flex-1">
-                <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                    {selectedFactory.district || 'สมุทรปราการ'}
-                  </span>
-                  {(selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) || (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      ✓ {selectedFactory.pipeline_stage || 'ติดต่อแล้ว'}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      ⚪ ยังไม่ได้ติดต่อ
-                    </span>
-                  )}
-                </div>
-                <h4 className="font-extrabold text-sm text-slate-900 leading-snug truncate pt-0.5">
-                  {selectedFactory.name}
-                </h4>
-              </div>
-              <button
-                onClick={() => setSelectedFactory(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        {/* Floating Today's Route Pill at top-right */}
+        <div className="absolute top-3.5 right-14 sm:right-16 z-30 flex items-center space-x-2 animate-in fade-in duration-200">
+          <Link
+            href="/planner"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs shadow-lg shadow-blue-600/30 hover:shadow-xl transition-all active:scale-95 touch-press"
+            title="เปิดดูแผนงานและระยะทางวิ่งรถประจำวัน"
+          >
+            <Car className="w-3.5 h-3.5" />
+            <span>แผนงาน ({todayPlan.stops.length})</span>
+            {todayRouteStats.totalKm > 0 && (
+              <span className="bg-white/25 text-white font-extrabold px-1.5 py-0.2 rounded-md text-[10px]">
+                ~{todayRouteStats.totalKm} กม.
+              </span>
+            )}
+          </Link>
+        </div>
 
-            {/* Quick Action Buttons */}
-            <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
-              {selectedFactory.phone ? (
-                <a
-                  href={`tel:${selectedFactory.phone.replace(/\s+/g, '')}`}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm touch-press active:scale-95"
-                >
-                  <Phone className="w-3.5 h-3.5 mb-0.5" />
-                  <span>โทรออก</span>
-                </a>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-100 text-slate-400 text-[10px]">
-                  <Phone className="w-3.5 h-3.5 mb-0.5" />
-                  <span>ไม่มีเบอร์</span>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmailCustomer(getCustomerFromFactory(selectedFactory));
-                  setIsEmailModalOpen(true);
-                }}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
-                  selectedFactory.email
-                    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200'
-                }`}
-              >
-                <Mail className={`w-3.5 h-3.5 mb-0.5 ${selectedFactory.email ? 'text-indigo-600' : 'text-slate-400'}`} />
-                <span>{selectedFactory.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
-              </button>
-
-              {selectedFactory.latitude && selectedFactory.longitude ? (
-                <a
-                  href={selectedFactory.google_maps_url || `https://www.google.com/maps?q=${selectedFactory.latitude},${selectedFactory.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
-                >
-                  <Navigation className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
-                  <span>นำทาง</span>
-                </a>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
-                  <Navigation className="w-3.5 h-3.5 mb-0.5" />
-                  <span>ไม่มีพิกัด</span>
-                </div>
-              )}
-
-              <button
-                onClick={() => setIsDetailModalOpen(true)}
-                className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
-              >
-                <Edit className="w-3.5 h-3.5 mb-0.5" />
-                <span>บันทึก</span>
-              </button>
-            </div>
+        {/* Toast Notification for Adding to Plan */}
+        {planToastMsg && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-150 max-w-sm">
+            <span>{planToastMsg}</span>
+            <Link href="/planner" className="underline text-blue-400 hover:text-blue-300 ml-1 shrink-0">
+              ดูแผนงาน ➔
+            </Link>
           </div>
         )}
+
+        {/* Floating Selected Factory Action Card on Mobile */}
+        {selectedFactory && !showDrawer && (() => {
+          const distFromUser =
+            userCoords && selectedFactory.latitude && selectedFactory.longitude
+              ? calculateDistanceKm(
+                  userCoords[0],
+                  userCoords[1],
+                  selectedFactory.latitude,
+                  selectedFactory.longitude
+                )
+              : null;
+
+          const isAlreadyInPlan = todayPlan.stops.some(
+            (s) =>
+              (s.customerId && s.customerId === selectedFactory.crm_id) ||
+              s.companyName === selectedFactory.name
+          );
+
+          const plannedIndex = todayPlan.stops.findIndex(
+            (s) =>
+              (s.customerId && s.customerId === selectedFactory.crm_id) ||
+              s.companyName === selectedFactory.name
+          );
+
+          return (
+            <div className="sm:hidden fixed mobile-action-card-position left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      {selectedFactory.district || 'สมุทรปราการ'}
+                    </span>
+                    {distFromUser !== null && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        📍 ~{formatDistanceThai(distFromUser)} จากคุณ
+                      </span>
+                    )}
+                    {(selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
+                    (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ✓ {selectedFactory.pipeline_stage || 'ติดต่อแล้ว'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        ⚪ ยังไม่ได้ติดต่อ
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900 leading-snug truncate pt-0.5">
+                    {selectedFactory.name}
+                  </h4>
+                </div>
+                <button
+                  onClick={() => setSelectedFactory(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Add to Today's Route Button */}
+              <button
+                type="button"
+                onClick={() => handleAddFactoryToPlan(selectedFactory)}
+                className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow-xs active:scale-[0.98] ${
+                  isAlreadyInPlan
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 text-white shadow-blue-600/20'
+                }`}
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>
+                  {isAlreadyInPlan
+                    ? `✓ อยู่ในแผนงานวันนี้แล้ว (จุดที่ #${plannedIndex + 1})`
+                    : `🚗 เพิ่มลงแผนงานวันนี้ (+ Add to Route)`}
+                </span>
+              </button>
+
+              {/* Quick Action Buttons */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
+                {selectedFactory.phone ? (
+                  <a
+                    href={`tel:${selectedFactory.phone.replace(/\s+/g, '')}`}
+                    className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm touch-press active:scale-95"
+                  >
+                    <Phone className="w-3.5 h-3.5 mb-0.5" />
+                    <span>โทรออก</span>
+                  </a>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-100 text-slate-400 text-[10px]">
+                    <Phone className="w-3.5 h-3.5 mb-0.5" />
+                    <span>ไม่มีเบอร์</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailCustomer(getCustomerFromFactory(selectedFactory));
+                    setIsEmailModalOpen(true);
+                  }}
+                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press ${
+                    selectedFactory.email
+                      ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}
+                >
+                  <Mail
+                    className={`w-3.5 h-3.5 mb-0.5 ${
+                      selectedFactory.email ? 'text-indigo-600' : 'text-slate-400'
+                    }`}
+                  />
+                  <span>{selectedFactory.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+                </button>
+
+                {selectedFactory.latitude && selectedFactory.longitude ? (
+                  <a
+                    href={
+                      selectedFactory.google_maps_url ||
+                      `https://www.google.com/maps?q=${selectedFactory.latitude},${selectedFactory.longitude}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
+                  >
+                    <Navigation className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
+                    <span>นำทาง</span>
+                  </a>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
+                    <Navigation className="w-3.5 h-3.5 mb-0.5" />
+                    <span>ไม่มีพิกัด</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setIsDetailModalOpen(true)}
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
+                >
+                  <Edit className="w-3.5 h-3.5 mb-0.5" />
+                  <span>บันทึก</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Floating Bottom Status Bar (Desktop only) */}
         <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/80 rounded-2xl p-3 hidden md:block max-w-xl">

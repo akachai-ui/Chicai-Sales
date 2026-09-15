@@ -46,7 +46,15 @@ import {
   Send,
   Eye,
   X,
+  Compass,
 } from 'lucide-react';
+import PlannerRouteMap from '@/components/planner/PlannerRouteMap';
+import {
+  calculateRouteStats,
+  formatDistanceThai,
+  estimateDrivingTimeMinutes,
+  formatDrivingTimeThai,
+} from '@/lib/geo-distance';
 
 export default function PlannerPage() {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -66,6 +74,9 @@ export default function PlannerPage() {
   // Syncing to CRM State
   const [syncingStopId, setSyncingStopId] = useState<string | null>(null);
   const [syncedSuccessIds, setSyncedSuccessIds] = useState<string[]>([]);
+
+  // Map View Toggle
+  const [showMap, setShowMap] = useState<boolean>(true);
 
   // Load plan when date changes
   useEffect(() => {
@@ -244,6 +255,11 @@ export default function PlannerPage() {
     return { total, completed, inProgress, pending, rescheduled };
   }, [plan.stops]);
 
+  // Route Distance & Driving Time Stats
+  const routeStats = useMemo(() => {
+    return calculateRouteStats(plan.stops);
+  }, [plan.stops]);
+
   const multiStopMapUrl = useMemo(() => {
     return generateMultiStopGoogleMapsUrl(plan.stops);
   }, [plan.stops]);
@@ -334,8 +350,8 @@ export default function PlannerPage() {
             </div>
           </div>
 
-          {/* Quick KPI Stats Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-2 border-t border-slate-100">
+          {/* Quick KPI Stats & Total Distance Summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 pt-2 border-t border-slate-100">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm shrink-0">
                 {stats.total}
@@ -343,6 +359,23 @@ export default function PlannerPage() {
               <div className="min-w-0">
                 <p className="text-[10px] uppercase font-extrabold text-slate-400">เป้าหมายทั้งหมด</p>
                 <p className="text-xs font-bold text-slate-800 truncate">{stats.total} โรงงาน</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 flex items-center space-x-3 col-span-2 sm:col-span-1">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+                🚗
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase font-extrabold text-indigo-700">ระยะทางรวม</p>
+                <p className="text-xs font-bold text-indigo-950 truncate">
+                  {routeStats.totalKm > 0 ? `~${routeStats.totalKm} กม.` : '-'}
+                  {routeStats.totalKm > 0 && (
+                    <span className="text-[10px] text-indigo-600 font-medium ml-1">
+                      ({formatDrivingTimeThai(estimateDrivingTimeMinutes(routeStats.totalKm))})
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
 
@@ -398,18 +431,33 @@ export default function PlannerPage() {
               </p>
             </div>
 
-            {/* Multi-stop Route Button */}
-            {multiStopMapUrl && (
-              <a
-                href={multiStopMapUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all active:scale-95 shrink-0"
+            {/* Multi-stop Route Button & Map Toggle */}
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                  showMap
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-white/15 text-slate-200 hover:bg-white/25'
+                }`}
               >
-                <Navigation className="w-3.5 h-3.5" />
-                <span>เปิดแผนที่นำทางรวม ({plan.stops.length} จุด)</span>
-              </a>
-            )}
+                <Compass className="w-3.5 h-3.5" />
+                <span>{showMap ? 'ซ่อนแผนที่เส้นทาง' : '🗺️ ดูแผนที่เส้นทาง'}</span>
+              </button>
+
+              {multiStopMapUrl && (
+                <a
+                  href={multiStopMapUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all active:scale-95 shrink-0"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>เปิด Google Maps รวม</span>
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
@@ -473,6 +521,29 @@ export default function PlannerPage() {
           </div>
         </div>
 
+        {/* Interactive Route Map View (If enabled and has stops) */}
+        {showMap && plan.stops.length > 0 && (
+          <div className="bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Compass className="w-4 h-4 text-blue-600" />
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900">
+                  แผนที่แสดงเส้นทางและระยะทางวิ่งรถ ({plan.stops.length} จุดหมาย)
+                </h3>
+              </div>
+              {routeStats.totalKm > 0 && (
+                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  ระยะทางรวม: ~{routeStats.totalKm} กม.
+                </span>
+              )}
+            </div>
+
+            <div className="h-72 sm:h-96 w-full">
+              <PlannerRouteMap stops={plan.stops} />
+            </div>
+          </div>
+        )}
+
         {/* Itinerary Stops List */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -529,10 +600,10 @@ export default function PlannerPage() {
                       )}`);
 
                 return (
-                  <div
-                    key={stop.id}
-                    className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden transition-all hover:border-slate-300"
-                  >
+                  <React.Fragment key={stop.id}>
+                    <div
+                      className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden transition-all hover:border-slate-300"
+                    >
                     {/* Stop Header Bar */}
                     <div className="p-3.5 sm:p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-2">
                       <div className="flex items-center space-x-2.5 min-w-0">
@@ -707,9 +778,30 @@ export default function PlannerPage() {
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Distance Connector to Next Stop */}
+                  {!isLast && (
+                    <div className="flex items-center justify-center my-1.5">
+                      <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-200/80 border border-slate-300/80 text-[10.5px] font-extrabold text-slate-700 shadow-2xs">
+                        <Car className="w-3 h-3 text-blue-600 shrink-0" />
+                        <span>
+                          ระยะทางไปจุดที่ {index + 2}:{' '}
+                          <b className="text-blue-700">
+                            {formatDistanceThai(routeStats.legDistances[index]) || 'ตามเส้นทาง'}
+                          </b>
+                        </span>
+                        {routeStats.legDistances[index] !== null && (
+                          <span className="text-slate-500 font-medium">
+                            ({formatDrivingTimeThai(estimateDrivingTimeMinutes(routeStats.legDistances[index]))})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
           )}
         </div>
       </main>
