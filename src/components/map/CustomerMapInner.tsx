@@ -717,9 +717,11 @@ function normalizeDistrictName(raw?: string | null): string {
             (factory.activities_count !== undefined && factory.activities_count > 0) ||
             (factory.pipeline_stage && factory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
-          const planIndex = todayPlan.stops.findIndex(
-            (s) => (s.customerId && s.customerId === factory.crm_id) || s.companyName === factory.name
-          );
+          const planIndex = todayPlan.stops.findIndex((s) => {
+            if (factory.crm_id && factory.crm_id > 0 && s.customerId && s.customerId === factory.crm_id) return true;
+            if (s.companyName && factory.name && s.companyName.trim().toLowerCase() === factory.name.trim().toLowerCase()) return true;
+            return false;
+          });
           const isInPlan = planIndex !== -1;
 
           const popupContent = `
@@ -814,9 +816,11 @@ function normalizeDistrictName(raw?: string | null): string {
         (selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
         (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
-      const planIndex = todayPlan.stops.findIndex(
-        (s) => (s.customerId && s.customerId === selectedFactory.crm_id) || s.companyName === selectedFactory.name
-      );
+      const planIndex = todayPlan.stops.findIndex((s) => {
+        if (selectedFactory.crm_id && selectedFactory.crm_id > 0 && s.customerId && s.customerId === selectedFactory.crm_id) return true;
+        if (s.companyName && selectedFactory.name && s.companyName.trim().toLowerCase() === selectedFactory.name.trim().toLowerCase()) return true;
+        return false;
+      });
       const isInPlan = planIndex !== -1;
 
       const popupContent = `
@@ -1429,17 +1433,12 @@ function normalizeDistrictName(raw?: string | null): string {
                 )
               : null;
 
-          const isAlreadyInPlan = todayPlan.stops.some(
-            (s) =>
-              (s.customerId && s.customerId === selectedFactory.crm_id) ||
-              s.companyName === selectedFactory.name
-          );
-
-          const plannedIndex = todayPlan.stops.findIndex(
-            (s) =>
-              (s.customerId && s.customerId === selectedFactory.crm_id) ||
-              s.companyName === selectedFactory.name
-          );
+          const plannedIndex = todayPlan.stops.findIndex((s) => {
+            if (selectedFactory.crm_id && selectedFactory.crm_id > 0 && s.customerId && s.customerId === selectedFactory.crm_id) return true;
+            if (s.companyName && selectedFactory.name && s.companyName.trim().toLowerCase() === selectedFactory.name.trim().toLowerCase()) return true;
+            return false;
+          });
+          const isAlreadyInPlan = plannedIndex !== -1;
 
           return (
             <div className="sm:hidden fixed mobile-action-card-position left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2 max-h-[70vh] overflow-y-auto">

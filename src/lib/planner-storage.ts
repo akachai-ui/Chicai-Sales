@@ -58,14 +58,27 @@ export function addCustomerToDailyPlan(
 ): { success: boolean; isDuplicate: boolean; plan: DailyPlan } {
   const plan = getDailyPlan(dateStr);
 
-  const isExisting = plan.stops.some((s) => s.customerId === customer.id || s.companyName === customer.name);
+  const isExisting = plan.stops.some((s) => {
+    if (customer.id && customer.id > 0 && s.customerId && s.customerId === customer.id) {
+      return true;
+    }
+    if (
+      s.companyName &&
+      customer.name &&
+      s.companyName.trim().toLowerCase() === customer.name.trim().toLowerCase()
+    ) {
+      return true;
+    }
+    return false;
+  });
+
   if (isExisting) {
     return { success: false, isDuplicate: true, plan };
   }
 
   const newStop: PlannedStop = {
     id: `stop_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    customerId: customer.id,
+    customerId: customer.id && customer.id > 0 ? customer.id : null,
     companyName: customer.name,
     contactPerson: customer.contact_person,
     phone: customer.phone,
