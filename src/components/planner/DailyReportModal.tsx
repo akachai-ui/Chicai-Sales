@@ -4,10 +4,15 @@ import React, { useState, useMemo, useRef } from 'react';
 import { DailyPlan, PlannedStop, VISIT_STATUS_CONFIG } from '@/types/planner';
 import {
   formatThaiFullDate,
+  formatChineseFullDate,
   generateMorningPlanSummaryText,
   generateEveningResultSummaryText,
+  generateChinesePlanSummaryText,
+  generateBilingualPlanSummaryText,
+  generateChineseResultSummaryText,
+  generateBilingualResultSummaryText,
 } from '@/lib/planner-storage';
-import { exportDailyPlanToExcel } from '@/lib/excel-export';
+import { exportDailyPlanToExcel, ReportLanguage } from '@/lib/excel-export';
 import {
   calculateRouteStats,
   formatDistanceThai,
@@ -34,6 +39,7 @@ import {
   Mail,
   Send,
   Download,
+  Globe,
 } from 'lucide-react';
 
 interface DailyReportModalProps {
@@ -50,6 +56,7 @@ export default function DailyReportModal({
   selectedDate,
 }: DailyReportModalProps) {
   const [reportType, setReportType] = useState<'morning' | 'evening' | 'official'>('morning');
+  const [reportLang, setReportLang] = useState<ReportLanguage>('th');
   const [copied, setCopied] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [executiveNote, setExecutiveNote] = useState('');
@@ -58,7 +65,12 @@ export default function DailyReportModal({
   const handleExportExcel = () => {
     setDownloadingExcel(true);
     try {
-      exportDailyPlanToExcel(plan, executiveNote, reportType === 'morning' ? 'plan' : 'result');
+      exportDailyPlanToExcel(
+        plan,
+        executiveNote,
+        reportType === 'morning' ? 'plan' : 'result',
+        reportLang
+      );
     } catch (err: any) {
       alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message);
     } finally {
@@ -70,6 +82,17 @@ export default function DailyReportModal({
   const routeStats = useMemo(() => {
     return calculateRouteStats(plan.stops);
   }, [plan.stops]);
+
+  const estMins = useMemo(() => {
+    return estimateDrivingTimeMinutes(routeStats.totalKm);
+  }, [routeStats.totalKm]);
+
+  const zhDrivingTime = useMemo(() => {
+    if (!estMins) return '';
+    const hours = Math.floor(estMins / 60);
+    const mins = estMins % 60;
+    return hours > 0 ? `約 ${hours} 小時 ${mins} 分鐘` : `約 ${mins} 分鐘`;
+  }, [estMins]);
 
   // Compute Completion Stats
   const stats = useMemo(() => {
@@ -84,25 +107,50 @@ export default function DailyReportModal({
     return { total, completed, inProgress, pending, rescheduled, rate };
   }, [plan.stops]);
 
-  // Generate plain text report based on selected tab and notes
+  // Generate plain text report based on selected tab, language and notes
   const reportText = useMemo(() => {
-    let base =
-      reportType === 'morning'
-        ? generateMorningPlanSummaryText(plan)
-        : generateEveningResultSummaryText(plan);
+    let base = '';
+    if (reportType === 'morning') {
+      if (reportLang === 'zh') {
+        base = generateChinesePlanSummaryText(plan);
+      } else if (reportLang === 'bilingual') {
+        base = generateBilingualPlanSummaryText(plan);
+      } else {
+        base = generateMorningPlanSummaryText(plan);
+      }
+    } else {
+      if (reportLang === 'zh') {
+        base = generateChineseResultSummaryText(plan);
+      } else if (reportLang === 'bilingual') {
+        base = generateBilingualResultSummaryText(plan);
+      } else {
+        base = generateEveningResultSummaryText(plan);
+      }
+    }
 
     if (executiveNote.trim()) {
+      const noteHeader =
+        reportLang === 'zh'
+          ? '📝 備註 / 重點摘要 (Executive Notes):'
+          : reportLang === 'bilingual'
+          ? '📝 หมายเหตุ / 備註摘要 (Executive Summary):'
+          : '📝 หมายเหตุ / สรุปภาพรวมแผนงาน:';
+
       base = base.replace(
         '------------------------------------\nCHICAI ELECTRIC',
-        `📝 หมายเหตุ / สรุปภาพรวมแผนงาน:\n${executiveNote.trim()}\n\n------------------------------------\nCHICAI ELECTRIC`
+        `${noteHeader}\n${executiveNote.trim()}\n\n------------------------------------\nCHICAI ELECTRIC`
       );
       base = base.replace(
         '------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ',
-        `📝 หมายเหตุ / สรุปภาพรวมแผนงาน:\n${executiveNote.trim()}\n\n------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ`
+        `${noteHeader}\n${executiveNote.trim()}\n\n------------------------------------\nบันทึกเข้าระบบ CRM เรียบร้อยแล้วครับ`
+      );
+      base = base.replace(
+        '------------------------------------\n已同步記錄至 CRM 系統。',
+        `${noteHeader}\n${executiveNote.trim()}\n\n------------------------------------\n已同步記錄至 CRM 系統。`
       );
     }
     return base;
-  }, [plan, reportType, executiveNote]);
+  }, [plan, reportType, reportLang, executiveNote]);
 
   // Handle Copy to Clipboard
   const handleCopy = async () => {
@@ -118,7 +166,11 @@ export default function DailyReportModal({
   // Handle Native Mobile Share (LINE, WhatsApp, Notes)
   const handleShare = async () => {
     const title =
-      reportType === 'morning'
+      reportLang === 'zh'
+        ? reportType === 'morning'
+          ? `每日工作行程拜訪表 (${formatChineseFullDate(selectedDate)})`
+          : `每日業務工作成果表 (${formatChineseFullDate(selectedDate)})`
+        : reportType === 'morning'
         ? `รายงานแผนการปฏิบัติงาน (${formatThaiFullDate(selectedDate)})`
         : `รายงานสรุปผลการปฏิบัติงาน (${formatThaiFullDate(selectedDate)})`;
 
@@ -156,14 +208,24 @@ export default function DailyReportModal({
               <div>
                 <div className="flex items-center space-x-2">
                   <h3 className="font-extrabold text-base sm:text-lg text-white tracking-tight">
-                    ศูนย์ออกรายงานแผนงาน & สรุปผล
+                    {reportLang === 'zh'
+                      ? '業務行程與拜訪報告中心'
+                      : reportLang === 'bilingual'
+                      ? 'ศูนย์ออกรายงานแผนงาน / 拜訪報告中心'
+                      : 'ศูนย์ออกรายงานแผนงาน & สรุปผล'}
                   </h3>
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                     Plan & Report Hub
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  ประจำ: <b>{formatThaiFullDate(selectedDate)}</b> • ผู้ปฏิบัติงาน: {plan.salesPersonName}
+                  {reportLang === 'zh' ? (
+                    <>日期: <b>{formatChineseFullDate(selectedDate)}</b> • 業務員: {plan.salesPersonName || 'CHICAI'}</>
+                  ) : reportLang === 'bilingual' ? (
+                    <>ประจำ: <b>{formatThaiFullDate(selectedDate)}</b> ({formatChineseFullDate(selectedDate)})</>
+                  ) : (
+                    <>ประจำ: <b>{formatThaiFullDate(selectedDate)}</b> • ผู้ปฏิบัติงาน: {plan.salesPersonName}</>
+                  )}
                 </p>
               </div>
             </div>
@@ -175,8 +237,54 @@ export default function DailyReportModal({
             </button>
           </div>
 
+          {/* Language Switcher Bar */}
+          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-white/10">
+            <div className="flex items-center space-x-1 text-xs text-amber-300 font-bold">
+              <Globe className="w-3.5 h-3.5" />
+              <span>ภาษาของรายงาน (Language):</span>
+            </div>
+            <div className="flex bg-black/30 p-0.5 rounded-lg text-[11px] font-bold gap-1 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setReportLang('th')}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1 ${
+                  reportLang === 'th'
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>🇹🇭</span>
+                <span>ไทย</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportLang('zh')}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1 ${
+                  reportLang === 'zh'
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>🇹🇼</span>
+                <span>繁體中文</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportLang('bilingual')}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1 ${
+                  reportLang === 'bilingual'
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>🇹🇭/🇹🇼</span>
+                <span>ไทย-จีน</span>
+              </button>
+            </div>
+          </div>
+
           {/* Report Type Tabs */}
-          <div className="flex bg-white/10 p-1 rounded-xl mt-3 text-xs font-bold gap-1">
+          <div className="flex bg-white/10 p-1 rounded-xl mt-2 text-xs font-bold gap-1">
             <button
               type="button"
               onClick={() => setReportType('morning')}
@@ -187,7 +295,13 @@ export default function DailyReportModal({
               }`}
             >
               <span>📋</span>
-              <span>รายงานแผนงาน (Work Plan)</span>
+              <span>
+                {reportLang === 'zh'
+                  ? '拜訪計劃表 (Work Plan)'
+                  : reportLang === 'bilingual'
+                  ? 'แผนงาน / 計劃表'
+                  : 'รายงานแผนงาน (Work Plan)'}
+              </span>
             </button>
             <button
               type="button"
@@ -199,7 +313,13 @@ export default function DailyReportModal({
               }`}
             >
               <span>📊</span>
-              <span>รายงานสรุปผล (End of Day)</span>
+              <span>
+                {reportLang === 'zh'
+                  ? '工作成果表 (End of Day)'
+                  : reportLang === 'bilingual'
+                  ? 'สรุปผล / 成果表'
+                  : 'รายงานสรุปผล (End of Day)'}
+              </span>
             </button>
             <button
               type="button"
@@ -211,7 +331,13 @@ export default function DailyReportModal({
               }`}
             >
               <span>📑</span>
-              <span>ฟอร์มแผนงานทางการ (PDF/พิมพ์)</span>
+              <span>
+                {reportLang === 'zh'
+                  ? '正式表單 (PDF/列印)'
+                  : reportLang === 'bilingual'
+                  ? 'ฟอร์มทางการ / 正式表單'
+                  : 'ฟอร์มแผนงานทางการ (PDF/พิมพ์)'}
+              </span>
             </button>
           </div>
         </div>
@@ -222,25 +348,35 @@ export default function DailyReportModal({
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-              <span className="text-[10px] uppercase font-extrabold text-slate-400 block">เป้าหมายทั้งหมด</span>
-              <span className="text-base font-black text-slate-900">{stats.total} โรงงาน</span>
+              <span className="text-[10px] uppercase font-extrabold text-slate-400 block">
+                {reportLang === 'zh' ? '目標工廠數' : reportLang === 'bilingual' ? 'เป้าหมาย / 目標' : 'เป้าหมายทั้งหมด'}
+              </span>
+              <span className="text-base font-black text-slate-900">
+                {stats.total} {reportLang === 'zh' ? '家' : 'โรงงาน'}
+              </span>
             </div>
             <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 shadow-2xs">
-              <span className="text-[10px] uppercase font-extrabold text-emerald-700 block">เข้าพบสำเร็จ</span>
+              <span className="text-[10px] uppercase font-extrabold text-emerald-700 block">
+                {reportLang === 'zh' ? '拜訪完成率' : reportLang === 'bilingual' ? 'สำเร็จ / 完成率' : 'เข้าพบสำเร็จ'}
+              </span>
               <span className="text-base font-black text-emerald-950">
                 {stats.completed} ({stats.rate}%)
               </span>
             </div>
             <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 shadow-2xs">
-              <span className="text-[10px] uppercase font-extrabold text-indigo-700 block">ระยะทางวิ่งรถรวม</span>
+              <span className="text-[10px] uppercase font-extrabold text-indigo-700 block">
+                {reportLang === 'zh' ? '預估總里程' : reportLang === 'bilingual' ? 'ระยะทาง / 總里程' : 'ระยะทางวิ่งรถรวม'}
+              </span>
               <span className="text-base font-black text-indigo-950">
-                {routeStats.totalKm > 0 ? `~${routeStats.totalKm} กม.` : '-'}
+                {routeStats.totalKm > 0 ? `~${routeStats.totalKm} ${reportLang === 'zh' ? '公里' : 'กม.'}` : '-'}
               </span>
             </div>
             <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 shadow-2xs">
-              <span className="text-[10px] uppercase font-extrabold text-amber-700 block">เลื่อน / รอติดตาม</span>
+              <span className="text-[10px] uppercase font-extrabold text-amber-700 block">
+                {reportLang === 'zh' ? '待跟進 / 改期' : reportLang === 'bilingual' ? 'รอติดตาม / 待跟進' : 'เลื่อน / รอติดตาม'}
+              </span>
               <span className="text-base font-black text-amber-950">
-                {stats.rescheduled + stats.pending} แห่ง
+                {stats.rescheduled + stats.pending} {reportLang === 'zh' ? '家' : 'แห่ง'}
               </span>
             </div>
           </div>
@@ -248,11 +384,21 @@ export default function DailyReportModal({
           {/* Optional Executive Note Input */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1 shadow-2xs">
             <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
-              <span>✍️ สรุปภาพรวม / ข้อเสนอแนะเพิ่มเติมสำหรับหัวหน้า (Executive Summary)</span>
+              <span>
+                {reportLang === 'zh'
+                  ? '✍️ 重點摘要與主管呈報 (Executive Summary / Notes)'
+                  : reportLang === 'bilingual'
+                  ? '✍️ สรุปภาพรวมสำหรับหัวหน้า / 重點呈報 (Executive Summary)'
+                  : '✍️ สรุปภาพรวม / ข้อเสนอแนะเพิ่มเติมสำหรับหัวหน้า (Executive Summary)'}
+              </span>
             </label>
             <textarea
               rows={2}
-              placeholder="พิมพ์ข้อความสรุปภาพรวมหน้างาน เช่น ลูกค้า 3 แห่งให้ความสนใจเครื่องกรองน้ำมันรุ่น LYJ-001-D มาก โดยเฉพาะ บ.พีซ พลาสติก นัดส่งใบเสนอราคาพรุ่งนี้..."
+              placeholder={
+                reportLang === 'zh'
+                  ? '輸入拜訪行程重點，例如：今日拜訪3家工廠對濾油機 LYJ-001-D 高度感興趣，預計明日提供報價單...'
+                  : 'พิมพ์ข้อความสรุปภาพรวมหน้างาน เช่น ลูกค้า 3 แห่งให้ความสนใจเครื่องกรองน้ำมันรุ่น LYJ-001-D มาก นัดส่งใบเสนอราคาพรุ่งนี้...'
+              }
               value={executiveNote}
               onChange={(e) => setExecutiveNote(e.target.value)}
               className="w-full p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-slate-800 leading-relaxed"
@@ -270,17 +416,35 @@ export default function DailyReportModal({
               <div className="border-b-2 border-slate-800 pb-3 flex items-start justify-between">
                 <div>
                   <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">
-                    CHICAI ELECTRIC (THAILAND) CO., LTD.
+                    {reportLang === 'zh'
+                      ? '啟凱電機 (泰國) 有限公司'
+                      : reportLang === 'bilingual'
+                      ? 'CHICAI ELECTRIC (THAILAND) CO., LTD. / 啟凱電機'
+                      : 'CHICAI ELECTRIC (THAILAND) CO., LTD.'}
                   </h2>
                   <p className="text-[11px] text-slate-600 font-bold">
-                    รายงานแผนการปฏิบัติงานและเส้นทางการเข้าพบลูกค้าประจำวัน (Daily Route & Visit Plan Report)
+                    {reportLang === 'zh'
+                      ? '每日工作行程與客戶拜訪計劃表 (Daily Route & Visit Plan Report)'
+                      : reportLang === 'bilingual'
+                      ? 'รายงานแผนการปฏิบัติงาน / 每日客戶拜訪計劃表 (Daily Route & Visit Plan Report)'
+                      : 'รายงานแผนการปฏิบัติงานและเส้นทางการเข้าพบลูกค้าประจำวัน (Daily Route & Visit Plan Report)'}
                   </p>
                 </div>
                 <div className="text-right text-xs">
                   <p className="font-extrabold text-slate-900">
-                    วันที่: <b>{formatThaiFullDate(selectedDate)}</b>
+                    {reportLang === 'zh' ? (
+                      <>日期: <b>{formatChineseFullDate(selectedDate)}</b></>
+                    ) : reportLang === 'bilingual' ? (
+                      <>วันที่ / 日期: <b>{formatThaiFullDate(selectedDate)}</b></>
+                    ) : (
+                      <>วันที่: <b>{formatThaiFullDate(selectedDate)}</b></>
+                    )}
                   </p>
-                  <p className="text-[11px] text-slate-500">ผู้ปฏิบัติงาน: {plan.salesPersonName}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {reportLang === 'zh'
+                      ? `業務代表: ${plan.salesPersonName || 'CHICAI'}`
+                      : `ผู้ปฏิบัติงาน: ${plan.salesPersonName}`}
+                  </p>
                 </div>
               </div>
 
@@ -289,24 +453,49 @@ export default function DailyReportModal({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-300 text-[11px] font-extrabold text-slate-700">
-                      <th className="py-2 px-2.5 w-8 text-center">#</th>
-                      <th className="py-2 px-2.5">โรงงาน / บริษัท</th>
-                      <th className="py-2 px-2.5">พื้นที่</th>
-                      <th className="py-2 px-2.5">วัตถุประสงค์</th>
-                      <th className="py-2 px-2.5 text-center">สถานะ</th>
-                      <th className="py-2 px-2.5">ผลการเข้าพบ / สรุป</th>
+                      <th className="py-2 px-2.5 w-8 text-center">
+                        {reportLang === 'zh' ? '序號' : '#'}
+                      </th>
+                      <th className="py-2 px-2.5">
+                        {reportLang === 'zh' ? '目標工廠 / 公司名稱' : reportLang === 'bilingual' ? 'โรงงาน / 公司名稱' : 'โรงงาน / บริษัท'}
+                      </th>
+                      <th className="py-2 px-2.5">
+                        {reportLang === 'zh' ? '區域 / 省份' : reportLang === 'bilingual' ? 'พื้นที่ / 區域' : 'พื้นที่'}
+                      </th>
+                      <th className="py-2 px-2.5">
+                        {reportLang === 'zh' ? '拜訪目的' : reportLang === 'bilingual' ? 'วัตถุประสงค์ / 目的' : 'วัตถุประสงค์'}
+                      </th>
+                      <th className="py-2 px-2.5 text-center">
+                        {reportLang === 'zh' ? '狀態' : reportLang === 'bilingual' ? 'สถานะ / 狀態' : 'สถานะ'}
+                      </th>
+                      <th className="py-2 px-2.5">
+                        {reportLang === 'zh' ? '現場紀錄 / 結果' : reportLang === 'bilingual' ? 'ผลสรุป / 紀錄' : 'ผลการเข้าพบ / สรุป'}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {plan.stops.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-4 text-center text-slate-400">
-                          ไม่มีรายการเข้าพบในวันที่ระบุ
+                          {reportLang === 'zh' ? '今日無排定拜訪行程' : 'ไม่มีรายการเข้าพบในวันที่ระบุ'}
                         </td>
                       </tr>
                     ) : (
                       plan.stops.map((s, idx) => {
                         const conf = VISIT_STATUS_CONFIG[s.status] || VISIT_STATUS_CONFIG.PLANNED;
+                        const statusLabel =
+                          reportLang === 'zh'
+                            ? s.status === 'COMPLETED'
+                              ? '已完成'
+                              : s.status === 'IN_PROGRESS'
+                              ? '進行中'
+                              : s.status === 'RESCHEDULED'
+                              ? '已改期'
+                              : s.status === 'CANCELLED'
+                              ? '已取消'
+                              : '計劃中'
+                            : conf.label;
+
                         return (
                           <tr key={s.id} className="hover:bg-slate-50/80">
                             <td className="py-2 px-2.5 font-bold text-center text-slate-500">
@@ -316,7 +505,7 @@ export default function DailyReportModal({
                               {s.companyName}
                               {s.contactPerson && (
                                 <span className="block text-[10px] font-normal text-slate-500">
-                                  คุณ{s.contactPerson} {s.phone ? `(${s.phone})` : ''}
+                                  {reportLang === 'zh' ? '聯絡人: ' : 'คุณ'}{s.contactPerson} {s.phone ? `(${s.phone})` : ''}
                                 </span>
                               )}
                             </td>
@@ -328,11 +517,11 @@ export default function DailyReportModal({
                             </td>
                             <td className="py-2 px-2.5 text-center">
                               <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${conf.bg} ${conf.color}`}>
-                                {conf.label}
+                                {statusLabel}
                               </span>
                             </td>
                             <td className="py-2 px-2.5 text-slate-700 text-[11px]">
-                              {s.resultNote || (s.status === 'COMPLETED' ? 'เข้าพบเรียบร้อย' : '-')}
+                              {s.resultNote || (s.status === 'COMPLETED' ? (reportLang === 'zh' ? '已順利完成' : 'เข้าพบเรียบร้อย') : '-')}
                             </td>
                           </tr>
                         );
@@ -345,9 +534,15 @@ export default function DailyReportModal({
               {/* Driving distance summary */}
               {routeStats.totalKm > 0 && (
                 <div className="p-2.5 bg-slate-100 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span>🚗 ระยะทางวิ่งรถรวมทั้งสิ้น:</span>
+                  <span>
+                    {reportLang === 'zh'
+                      ? '🚗 預估全日行駛總里程:'
+                      : reportLang === 'bilingual'
+                      ? '🚗 ระยะทางรวม / 預估總里程:'
+                      : '🚗 ระยะทางวิ่งรถรวมทั้งสิ้น:'}
+                  </span>
                   <span className="text-blue-700 font-black">
-                    ~{routeStats.totalKm} กิโลเมตร ({formatDrivingTimeThai(estimateDrivingTimeMinutes(routeStats.totalKm))})
+                    ~{routeStats.totalKm} {reportLang === 'zh' ? `公里 (${zhDrivingTime})` : `กิโลเมตร (${formatDrivingTimeThai(estMins)})`}
                   </span>
                 </div>
               )}
@@ -356,7 +551,9 @@ export default function DailyReportModal({
               {executiveNote.trim() && (
                 <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-1">
                   <span className="font-extrabold text-blue-900 text-xs block">
-                    ข้อสรุปภาพรวมและประเด็นสำคัญ (Executive Summary):
+                    {reportLang === 'zh'
+                      ? '重點摘要與說明 (Executive Summary):'
+                      : 'ข้อสรุปภาพรวมและประเด็นสำคัญ (Executive Summary):'}
                   </span>
                   <p className="text-xs text-blue-950 whitespace-pre-wrap leading-relaxed">
                     {executiveNote.trim()}
@@ -367,12 +564,30 @@ export default function DailyReportModal({
               {/* Signature Bar */}
               <div className="pt-6 grid grid-cols-2 gap-8 text-center text-xs text-slate-600 border-t border-slate-200">
                 <div className="space-y-6">
-                  <p className="font-bold">ลงชื่อ ......................................................</p>
-                  <p>({plan.salesPersonName})<br />เจ้าหน้าที่ฝ่ายขายและวิศวกรรม</p>
+                  <p className="font-bold">
+                    {reportLang === 'zh'
+                      ? '填表人 / 業務代表簽名 ......................................................'
+                      : reportLang === 'bilingual'
+                      ? 'ลงชื่อผู้วางแผน / 業務代表簽名 ......................................................'
+                      : 'ลงชื่อ ......................................................'}
+                  </p>
+                  <p>
+                    ({plan.salesPersonName})<br />
+                    {reportLang === 'zh' ? '業務與技術代表 (Sales & Technical Engineer)' : 'เจ้าหน้าที่ฝ่ายขายและวิศวกรรม'}
+                  </p>
                 </div>
                 <div className="space-y-6">
-                  <p className="font-bold">ลงชื่อ ......................................................</p>
-                  <p>(..........................................................)<br />ผู้จัดการฝ่ายขาย / ผู้บังคับบัญชา</p>
+                  <p className="font-bold">
+                    {reportLang === 'zh'
+                      ? '業務主管 / 經理簽核 ......................................................'
+                      : reportLang === 'bilingual'
+                      ? 'ลงชื่อผู้จัดการ / 業務主管簽核 ......................................................'
+                      : 'ลงชื่อ ......................................................'}
+                  </p>
+                  <p>
+                    (..........................................................)<br />
+                    {reportLang === 'zh' ? '業務主管 / 總經理 (Sales Manager / Managing Director)' : 'ผู้จัดการฝ่ายขาย / ผู้บังคับบัญชา'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -380,10 +595,16 @@ export default function DailyReportModal({
             /* LINE-Formatted Plain Text Preview */
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                <span>ตัวอย่างข้อความจัดรูปแบบสำหรับส่ง LINE / Chat:</span>
+                <span>
+                  {reportLang === 'zh'
+                    ? '即時通訊格式預覽 (LINE / WeChat / 訊息):'
+                    : 'ตัวอย่างข้อความจัดรูปแบบสำหรับส่ง LINE / Chat:'}
+                </span>
                 <span className="text-emerald-700 flex items-center space-x-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>จัดรูปแบบข้อความพร้อมลิงก์และพิกัด</span>
+                  <span>
+                    {reportLang === 'zh' ? '已自動附加導航地圖與聯絡資訊' : 'จัดรูปแบบข้อความพร้อมลิงก์และพิกัด'}
+                  </span>
                 </span>
               </div>
               <pre className="p-4 rounded-xl bg-slate-900 text-emerald-300 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto border border-slate-800 select-all">
@@ -404,7 +625,15 @@ export default function DailyReportModal({
               title="ดาวน์โหลดรายงานสรุปเป็นไฟล์ Excel (.xlsx)"
             >
               <Download className="w-4 h-4 text-emerald-700" />
-              <span>{downloadingExcel ? 'กำลังสร้างไฟล์...' : '📥 ดาวน์โหลด Excel (.xlsx)'}</span>
+              <span>
+                {downloadingExcel
+                  ? 'กำลังสร้างไฟล์...'
+                  : reportLang === 'zh'
+                  ? '📥 下載 Excel 報表 (.xlsx)'
+                  : reportLang === 'bilingual'
+                  ? '📥 โหลด Excel (.xlsx) 2 ภาษา'
+                  : '📥 ดาวน์โหลด Excel (.xlsx)'}
+              </span>
             </button>
 
             <button
@@ -414,7 +643,7 @@ export default function DailyReportModal({
               title="พิมพ์เอกสาร หรือบันทึกเป็น PDF"
             >
               <Printer className="w-4 h-4" />
-              <span>พิมพ์ / Save PDF</span>
+              <span>{reportLang === 'zh' ? '列印 / 存為 PDF' : 'พิมพ์ / Save PDF'}</span>
             </button>
           </div>
 
@@ -424,7 +653,7 @@ export default function DailyReportModal({
               onClick={onClose}
               className="py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors"
             >
-              ปิด
+              {reportLang === 'zh' ? '關閉' : 'ปิด'}
             </button>
             <button
               type="button"
@@ -434,12 +663,14 @@ export default function DailyReportModal({
               {copied ? (
                 <>
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>คัดลอกข้อความแล้ว!</span>
+                  <span>{reportLang === 'zh' ? '已複製內容！' : 'คัดลอกข้อความแล้ว!'}</span>
                 </>
               ) : (
                 <>
                   <Share2 className="w-4 h-4" />
-                  <span>🟢 ส่งรายงาน (LINE / Share)</span>
+                  <span>
+                    {reportLang === 'zh' ? '🟢 發送報告 (LINE / 複製)' : '🟢 ส่งรายงาน (LINE / Share)'}
+                  </span>
                 </>
               )}
             </button>
@@ -449,3 +680,4 @@ export default function DailyReportModal({
     </div>
   );
 }
+
