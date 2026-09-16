@@ -1,45 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import {
-  MapPin,
-  Users,
-  LayoutDashboard,
-  Layers,
-  Sparkles,
-  Plus,
-  Navigation,
-  CalendarCheck,
-  RotateCcw,
-  AlertTriangle,
-  Loader2
-} from 'lucide-react';
-import { resetAllCrmAndPlannerData } from '@/lib/reset-helper';
+import { usePathname } from 'next/navigation';
+import { MapPin, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-
-  const handleReset = async () => {
-    setIsResetting(true);
-    try {
-      await resetAllCrmAndPlannerData();
-      setShowResetModal(false);
-      window.location.href = '/';
-    } catch (err) {
-      alert('เกิดข้อผิดพลาดในการรีเซ็ตข้อมูล');
-      setIsResetting(false);
-    }
-  };
 
   const navItems = [
     { name: 'หน้าหลัก', href: '/', icon: LayoutDashboard, label: 'หน้าหลัก' },
     { name: 'แผนที่', href: '/map', icon: MapPin, label: 'แผนที่' },
-    { name: 'ค้นหา DBD', href: '/dbd-leads', icon: Sparkles, label: 'ค้นหา DBD' },
   ];
 
   const isMapPage = pathname === '/map';
@@ -58,48 +29,32 @@ export default function Navbar() {
                 <div className="flex items-center space-x-2">
                   <span className="font-bold text-lg text-slate-900 tracking-tight">Chicai Sales</span>
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    CRM & Field Map
-                  </span>
-                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Realtime Sync</span>
+                    Field Map & CRM
                   </span>
                 </div>
               </div>
             </Link>
 
-            <div className="flex items-center space-x-2">
-              <nav className="flex items-center space-x-1 sm:space-x-1.5">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <button
-                type="button"
-                onClick={() => setShowResetModal(true)}
-                title="รีเซ็ตข้อมูลทั้งหมด (พอร์ต/แผนงาน/กิจกรรม)"
-                aria-label="รีเซ็ตข้อมูลทั้งหมด (พอร์ต/แผนงาน/กิจกรรม)"
-                className="ml-2 p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-200"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
+            <nav className="flex items-center space-x-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
         </div>
       </header>
@@ -112,27 +67,12 @@ export default function Navbar() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-blue-500/30">
                 <MapPin className="w-4 h-4" />
               </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="font-extrabold text-sm text-slate-900 tracking-tight">Chicai Sales</span>
-                <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Live</span>
-                </span>
-              </div>
+              <span className="font-extrabold text-sm text-slate-900 tracking-tight">Chicai Sales</span>
             </Link>
             <div className="flex items-center space-x-1.5">
-              <button
-                type="button"
-                onClick={() => setShowResetModal(true)}
-                title="รีเซ็ตข้อมูลทั้งหมด"
-                aria-label="รีเซ็ตข้อมูลทั้งหมด"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 touch-press border border-slate-200"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
               <Link
                 href="/map"
-                className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 text-[11px] font-bold touch-press"
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs touch-press"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>เปิดแผนที่</span>
@@ -144,7 +84,7 @@ export default function Navbar() {
 
       {/* 3. Mobile Bottom Navigation Tab Bar (iOS / Android Native Style) */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 safe-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <nav className="grid grid-cols-3 h-14 items-center px-2">
+        <nav className="grid grid-cols-2 h-14 items-center px-6">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -157,82 +97,27 @@ export default function Navbar() {
                 }`}
               >
                 <div
-                  className={`w-9 h-6 flex items-center justify-center rounded-full transition-all ${
+                  className={`w-12 h-6 flex items-center justify-center rounded-full transition-all ${
                     isActive ? 'bg-blue-100 text-blue-700 scale-105' : 'text-slate-500'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                 </div>
                 <span
-                  className={`text-[9.5px] font-bold tracking-tight mt-0.5 truncate max-w-[50px] ${
+                  className={`text-[11px] font-bold tracking-tight mt-0.5 truncate ${
                     isActive ? 'text-blue-700 font-extrabold' : 'text-slate-500'
                   }`}
                 >
                   {item.label}
                 </span>
                 {isActive && (
-                  <span className="absolute top-1 right-1/4 w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <span className="absolute top-1 right-1/3 w-1.5 h-1.5 rounded-full bg-blue-600" />
                 )}
               </Link>
             );
           })}
         </nav>
       </div>
-
-      {/* Reset Confirmation Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 scale-100">
-            <div className="flex items-center space-x-3 text-rose-600 mb-4">
-              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">รีเซ็ตข้อมูลเริ่มต้น</h3>
-                <p className="text-xs text-rose-600 font-medium">ล้างข้อมูลเพื่อเริ่มใหม่อย่างสมบูรณ์</p>
-              </div>
-            </div>
-
-            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 mb-5 text-xs text-rose-900 space-y-1.5">
-              <p className="font-bold">รายการที่จะถูกลบ/ล้างข้อมูลทั้งหมด:</p>
-              <ul className="list-disc pl-4 space-y-1 text-[11px] text-rose-800">
-                <li>ลูกค้าในพอร์ตที่เลือกไว้ทั้งหมด (Portfolio)</li>
-                <li>ตารางแผนการเดินทาง และจุดแวะทุกวัน (Daily Planner)</li>
-                <li>ประวัติกิจกรรม CRM, บันทึกการโทร และสถานะดีลทั้งหมด</li>
-              </ul>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3">
-              <button
-                type="button"
-                disabled={isResetting}
-                onClick={() => setShowResetModal(false)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                disabled={isResetting}
-                onClick={handleReset}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold shadow-md shadow-rose-600/30 transition-all disabled:opacity-50"
-              >
-                {isResetting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>กำลังล้างข้อมูล...</span>
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4" />
-                    <span>ยืนยันลบและเริ่มใหม่</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

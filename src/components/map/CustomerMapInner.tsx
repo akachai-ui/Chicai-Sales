@@ -4,9 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Customer, DBDCompany, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import { fetchAllCustomers, subscribeToRealtimeChanges, supabase } from '@/lib/supabase';
 import CustomerDetailModal from './CustomerDetailModal';
-import CustomerFormModal from '@/components/customers/CustomerFormModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
-import DailyReportModal from '@/components/planner/DailyReportModal';
 import { generateDistrictZones, DistrictZone } from '@/lib/geo';
 import { getDbdSearchUrl, getCleanCompanyName } from '@/lib/utils';
 import Supercluster from 'supercluster';
@@ -35,12 +33,6 @@ import {
   Star,
 } from 'lucide-react';
 import Link from 'next/link';
-import { getDailyPlan, addCustomerToDailyPlan } from '@/lib/planner-storage';
-import {
-  getPortfolioCustomerIds,
-  togglePortfolioCustomerId,
-  isCustomerInPortfolio,
-} from '@/lib/portfolio-storage';
 import {
   calculateDistanceKm,
   formatDistanceThai,
@@ -270,8 +262,6 @@ export default function CustomerMapInner({
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
   const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
-  const [onlyPortfolio, setOnlyPortfolio] = useState<boolean>(true);
-  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
   const [showZones, setShowZones] = useState(true);
 
   // Convert UnifiedFactory to Customer object for modal compatibility
@@ -311,59 +301,16 @@ export default function CustomerMapInner({
     };
   }, [rawCustomers]);
 
-  // Load portfolio customer IDs on mount
-  useEffect(() => {
-    setPortfolioIds(getPortfolioCustomerIds());
-  }, []);
-
-  const handleTogglePortfolio = (customerId?: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!customerId) return;
-    togglePortfolioCustomerId(customerId);
-    setPortfolioIds(getPortfolioCustomerIds());
-  };
-
   // Drawer
   const [showDrawer, setShowDrawer] = useState(true);
 
   // Selected factory
   const [selectedFactory, setSelectedFactory] = useState<UnifiedFactory | null>(null);
-
-  // Daily Plan & Route States
-  const [todayPlan, setTodayPlan] = useState(() => getDailyPlan(new Date().toISOString().split('T')[0]));
-  const [planToastMsg, setPlanToastMsg] = useState<string | null>(null);
   const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
-
-  const todayRouteStats = useMemo(() => {
-    return calculateRouteStats(todayPlan.stops);
-  }, [todayPlan.stops]);
-
-  const handleAddFactoryToPlan = (fact: UnifiedFactory, targetDate?: string) => {
-    const dStr = targetDate || new Date().toISOString().split('T')[0];
-    const cust: Customer = getCustomerFromFactory(fact);
-    const res = addCustomerToDailyPlan(cust, dStr);
-    
-    if (dStr === new Date().toISOString().split('T')[0]) {
-      setTodayPlan(res.plan);
-    }
-
-    const isTodayD = dStr === new Date().toISOString().split('T')[0];
-    const isTomorrowD = dStr === new Date(Date.now() + 86400000).toISOString().split('T')[0];
-    const dateLabel = isTodayD ? 'วันนี้' : isTomorrowD ? 'พรุ่งนี้' : `วันที่ ${dStr}`;
-
-    if (res.isDuplicate) {
-      setPlanToastMsg(`⚠️ ${fact.name} อยู่ในแผนงาน (${dateLabel}) แล้ว`);
-    } else {
-      setPlanToastMsg(`✅ เพิ่ม ${fact.name} เป็นจุดหมายที่ #${res.plan.stops.length} ในแผนงาน (${dateLabel}) แล้ว`);
-    }
-    setTimeout(() => setPlanToastMsg(null), 3500);
-  };
 
   // Modals
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
 
   // Map DOM and Leaflet instance references
@@ -486,19 +433,14 @@ function normalizeDistrictName(raw?: string | null): string {
   return s;
 }
 
-  // Summary counts of contacted vs uncontacted, with email, and in portfolio
+  // Summary counts of contacted vs uncontacted, and with email
   const statsSummary = useMemo(() => {
     let contacted = 0;
     let uncontacted = 0;
     let withEmail = 0;
-    let portfolioCount = 0;
 
     unifiedFactories.forEach((f) => {
       if (f.email && f.email.trim()) withEmail++;
-      const custObj = getCustomerFromFactory(f);
-      if (isCustomerInPortfolio(custObj, portfolioIds)) {
-        portfolioCount++;
-      }
 
       const hasContact =
         (f.activities_count !== undefined && f.activities_count > 0) ||
@@ -506,8 +448,8 @@ function normalizeDistrictName(raw?: string | null): string {
       if (hasContact) contacted++;
       else uncontacted++;
     });
-    return { contacted, uncontacted, withEmail, portfolioCount, total: unifiedFactories.length };
-  }, [unifiedFactories, portfolioIds]);
+    return { contacted, uncontacted, withEmail, total: unifiedFactories.length };
+  }, [unifiedFactories]);
 
   // Generate District Zones automatically from all unified points
   const districtZones = useMemo(() => {
@@ -527,12 +469,6 @@ function normalizeDistrictName(raw?: string | null): string {
   const filteredFactories = useMemo(() => {
     return unifiedFactories.filter((f) => {
       if (!f.latitude || !f.longitude) return false;
-
-      // Portfolio Focus Filter
-      if (onlyPortfolio) {
-        const custObj = getCustomerFromFactory(f);
-        if (!isCustomerInPortfolio(custObj, portfolioIds)) return false;
-      }
 
       if (selectedDistrict !== 'ALL' && f.district !== selectedDistrict) return false;
       if (selectedStage !== 'ALL' && f.pipeline_stage !== selectedStage) return false;
@@ -557,7 +493,7 @@ function normalizeDistrictName(raw?: string | null): string {
       }
       return true;
     });
-  }, [unifiedFactories, onlyPortfolio, portfolioIds, selectedDistrict, selectedStage, contactFilter, searchQuery]);
+  }, [unifiedFactories, selectedDistrict, selectedStage, contactFilter, searchQuery]);
 
   // Fly to Factory
   const flyToFactory = useCallback((factory: UnifiedFactory) => {
@@ -753,13 +689,6 @@ function normalizeDistrictName(raw?: string | null): string {
             (factory.activities_count !== undefined && factory.activities_count > 0) ||
             (factory.pipeline_stage && factory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
-          const planIndex = todayPlan.stops.findIndex((s) => {
-            if (factory.crm_id && factory.crm_id > 0 && s.customerId && s.customerId === factory.crm_id) return true;
-            if (s.companyName && factory.name && s.companyName.trim().toLowerCase() === factory.name.trim().toLowerCase()) return true;
-            return false;
-          });
-          const isInPlan = planIndex !== -1;
-
           const popupContent = `
             <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
               <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
@@ -779,11 +708,8 @@ function normalizeDistrictName(raw?: string | null): string {
                   📞 <b>${factory.phone}</b>
                 </div>
               ` : ''}
-              <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 4px;">
-                <button id="btn-popup-plan-${factory.id}" style="width: 100%; padding: 7px 10px; background: ${isInPlan ? '#ecfdf5' : 'linear-gradient(135deg, #2563eb, #4f46e5)'}; color: ${isInPlan ? '#065f46' : '#ffffff'}; border: ${isInPlan ? '1.5px solid #34d399' : 'none'}; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.12);">
-                  ${isInPlan ? `✓ อยู่ในแผนงานแล้ว (จุดที่ #${planIndex + 1})` : `🚗 + เพิ่มเข้าแผนงาน`}
-                </button>
-                <button id="btn-popup-details-${factory.id}" style="width: 100%; padding: 5px 10px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+              <div style="margin-top: 6px;">
+                <button id="btn-popup-details-${factory.id}" style="width: 100%; padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(37,99,235,0.3);">
                   ดูรายละเอียด & บันทึกงานขาย ➔
                 </button>
               </div>
@@ -805,24 +731,13 @@ function normalizeDistrictName(raw?: string | null): string {
                 setIsDetailModalOpen(true);
               };
             }
-            const btnPlan = document.getElementById(`btn-popup-plan-${factory.id}`);
-            if (btnPlan) {
-              btnPlan.onclick = (e) => {
-                e.stopPropagation();
-                handleAddFactoryToPlan(factory);
-                btnPlan.style.background = '#ecfdf5';
-                btnPlan.style.color = '#065f46';
-                btnPlan.style.border = '1.5px solid #34d399';
-                btnPlan.innerText = '✓ เพิ่มเข้าแผนงานแล้ว!';
-              };
-            }
           });
 
           markersGroup.addLayer(marker);
         }
       });
     });
-  }, [selectedFactory, flyToFactory, todayPlan]);
+  }, [selectedFactory, flyToFactory]);
 
   // Dedicated Highlight Layer for Selected Factory
   useEffect(() => {
@@ -852,13 +767,6 @@ function normalizeDistrictName(raw?: string | null): string {
         (selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
         (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
 
-      const planIndex = todayPlan.stops.findIndex((s) => {
-        if (selectedFactory.crm_id && selectedFactory.crm_id > 0 && s.customerId && s.customerId === selectedFactory.crm_id) return true;
-        if (s.companyName && selectedFactory.name && s.companyName.trim().toLowerCase() === selectedFactory.name.trim().toLowerCase()) return true;
-        return false;
-      });
-      const isInPlan = planIndex !== -1;
-
       const popupContent = `
         <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
           <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
@@ -878,11 +786,8 @@ function normalizeDistrictName(raw?: string | null): string {
               📞 <b>${selectedFactory.phone}</b>
             </div>
           ` : ''}
-          <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 4px;">
-            <button id="btn-details-selected-plan-${selectedFactory.id}" style="width: 100%; padding: 7px 10px; background: ${isInPlan ? '#ecfdf5' : 'linear-gradient(135deg, #2563eb, #4f46e5)'}; color: ${isInPlan ? '#065f46' : '#ffffff'}; border: ${isInPlan ? '1.5px solid #34d399' : 'none'}; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.12);">
-              ${isInPlan ? `✓ อยู่ในแผนงานแล้ว (จุดที่ #${planIndex + 1})` : `🚗 + เพิ่มเข้าแผนงาน`}
-            </button>
-            <button id="btn-details-selected-${selectedFactory.id}" style="width: 100%; padding: 5px 10px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+          <div style="margin-top: 6px;">
+            <button id="btn-details-selected-${selectedFactory.id}" style="width: 100%; padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(37,99,235,0.3);">
               ดูรายละเอียด & บันทึกงานขาย ➔
             </button>
           </div>
@@ -897,17 +802,6 @@ function normalizeDistrictName(raw?: string | null): string {
             setIsDetailModalOpen(true);
           };
         }
-        const btnPlan = document.getElementById(`btn-details-selected-plan-${selectedFactory.id}`);
-        if (btnPlan) {
-          btnPlan.onclick = (e) => {
-            e.stopPropagation();
-            handleAddFactoryToPlan(selectedFactory);
-            btnPlan.style.background = '#ecfdf5';
-            btnPlan.style.color = '#065f46';
-            btnPlan.style.border = '1.5px solid #34d399';
-            btnPlan.innerText = '✓ เพิ่มเข้าแผนงานแล้ว!';
-          };
-        }
       });
 
       layer.addLayer(marker);
@@ -915,7 +809,7 @@ function normalizeDistrictName(raw?: string | null): string {
         marker.openPopup();
       }
     });
-  }, [selectedFactory, todayPlan]);
+  }, [selectedFactory]);
 
   // Draw or clear District Zones
   const renderDistrictZones = useCallback(() => {
@@ -968,126 +862,7 @@ function normalizeDistrictName(raw?: string | null): string {
   }, [districtZones, showZones]);
 
   // Draw connecting Route Polylines & Numbered Stop Badges on Map
-  useEffect(() => {
-    if (!mapInstanceRef.current || !routePolylinesLayerRef.current) return;
 
-    import('leaflet').then((leaflet) => {
-      const L = leaflet.default || leaflet;
-      const layer = routePolylinesLayerRef.current;
-      layer.clearLayers();
-
-      const validStops = todayPlan.stops.filter(
-        (s) => s.latitude && s.longitude && !isNaN(s.latitude) && !isNaN(s.longitude)
-      );
-
-      if (validStops.length === 0) return;
-
-      const latLngs: [number, number][] = validStops.map((s) => [s.latitude!, s.longitude!]);
-
-      // 1. Draw Connecting Polyline if >= 2 stops
-      if (latLngs.length > 1) {
-        // Glow polyline
-        L.polyline(latLngs, {
-          color: '#818cf8',
-          weight: 8,
-          opacity: 0.45,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(layer);
-
-        // Main vibrant dashed polyline
-        L.polyline(latLngs, {
-          color: '#2563eb',
-          weight: 4,
-          opacity: 0.95,
-          dashArray: '8, 8',
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(layer);
-
-        // Mid-point distance badges
-        for (let i = 0; i < validStops.length - 1; i++) {
-          const from = validStops[i];
-          const to = validStops[i + 1];
-          const distKm = calculateDistanceKm(from.latitude, from.longitude, to.latitude, to.longitude);
-
-          if (distKm !== null) {
-            const midLat = (from.latitude! + to.latitude!) / 2;
-            const midLng = (from.longitude! + to.longitude!) / 2;
-            const timeMin = estimateDrivingTimeMinutes(distKm);
-
-            const distanceIcon = L.divIcon({
-              className: 'map-route-dist-badge',
-              html: `
-                <div style="
-                  background: #0f172a;
-                  color: #ffffff;
-                  padding: 2.5px 8px;
-                  border-radius: 9999px;
-                  font-size: 10px;
-                  font-weight: 800;
-                  white-space: nowrap;
-                  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
-                  border: 1.5px solid #60a5fa;
-                  display: flex;
-                  align-items: center;
-                  gap: 3px;
-                  pointer-events: none;
-                  transform: translate(-50%, -50%);
-                ">
-                  <span>🚗 ${formatDistanceThai(distKm)}</span>
-                  ${timeMin ? `<span style="color: #93c5fd; font-size: 9px;">(${timeMin}น.)</span>` : ''}
-                </div>
-              `,
-              iconSize: [0, 0],
-            });
-
-            L.marker([midLat, midLng], { icon: distanceIcon }).addTo(layer);
-          }
-        }
-      }
-
-      // 2. Draw Numbered Stop Pin Overlays (#1, #2, #3...)
-      validStops.forEach((stop, index) => {
-        const num = index + 1;
-        const isCompleted = stop.status === 'COMPLETED';
-        const isInProgress = stop.status === 'IN_PROGRESS';
-        const badgeBg = isCompleted ? '#059669' : isInProgress ? '#2563eb' : '#4f46e5';
-
-        const stopBadgeIcon = L.divIcon({
-          className: 'map-route-stop-numbered-pin',
-          html: `
-            <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-              <div style="position: absolute; inset: -4px; border-radius: 9999px; background: ${badgeBg}; opacity: 0.35; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
-              <div style="
-                width: 26px;
-                height: 26px;
-                border-radius: 9999px;
-                background: ${badgeBg};
-                color: #ffffff;
-                font-size: 13px;
-                font-weight: 900;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2.5px solid #ffffff;
-                box-shadow: 0 3px 8px rgba(0,0,0,0.45);
-              ">
-                ${num}
-              </div>
-            </div>
-          `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 44],
-        });
-
-        L.marker([stop.latitude!, stop.longitude!], {
-          icon: stopBadgeIcon,
-          zIndexOffset: 60000 + index,
-        }).addTo(layer);
-      });
-    });
-  }, [todayPlan]);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -1260,28 +1035,9 @@ function normalizeDistrictName(raw?: string | null): string {
             {/* Quick Status Filter Pills */}
             <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-md shadow-md rounded-2xl border border-slate-200/80 p-1 shrink-0 overflow-x-auto no-scrollbar">
               <button
-                onClick={() => setOnlyPortfolio(!onlyPortfolio)}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all touch-press ${
-                  onlyPortfolio
-                    ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-300'
-                    : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/70'
-                }`}
-                title="แสดงเฉพาะลูกค้าในพอร์ตโฟลิโอของคุณ"
-              >
-                <Star className={`w-3.5 h-3.5 ${onlyPortfolio ? 'fill-white text-white' : 'fill-amber-400 text-amber-500'}`} />
-                <span>ในพอร์ต</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${onlyPortfolio ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'}`}>
-                  {statsSummary.portfolioCount}
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setContactFilter('ALL');
-                  setOnlyPortfolio(false);
-                }}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
-                  contactFilter === 'ALL' && !onlyPortfolio
+                onClick={() => setContactFilter('ALL')}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'ALL'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
@@ -1379,7 +1135,7 @@ function normalizeDistrictName(raw?: string | null): string {
         </div>
 
         {/* Floating Vertical FAB Column on Right Side */}
-        <div className="absolute top-36 sm:top-20 right-2.5 sm:right-4 z-20 flex flex-col space-y-2 pointer-events-auto">
+        <div className="absolute top-28 sm:top-20 right-2.5 sm:right-4 z-20 flex flex-col space-y-2 pointer-events-auto">
           {/* Locate Me (GPS) */}
           <button
             onClick={handleLocateMe}
@@ -1417,74 +1173,7 @@ function normalizeDistrictName(raw?: string | null): string {
               {filteredFactories.length}
             </span>
           </button>
-
-          {/* Add New Factory */}
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            title="+ เพิ่มโรงงานใหม่"
-            className="w-10 h-10 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 rounded-2xl border border-emerald-600 flex items-center justify-center touch-press"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
         </div>
-
-        {/* Floating Today's Route Pill at top-right */}
-        <div className="absolute top-3.5 right-14 sm:right-16 z-30 flex items-center space-x-1.5 animate-in fade-in duration-200">
-          <button
-            type="button"
-            onClick={() => setIsReportModalOpen(true)}
-            className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 touch-press"
-            title="ออกรายงานสรุปการปฏิบัติงานส่งหัวหน้า (PDF / LINE / พิมพ์)"
-          >
-            <span>📑</span>
-            <span className="hidden sm:inline">ออกรายงาน</span>
-          </button>
-
-          {todayPlan.stops.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                const valid = todayPlan.stops.filter((s) => s.latitude && s.longitude);
-                if (valid.length > 0 && mapInstanceRef.current) {
-                  import('leaflet').then((leaflet) => {
-                    const L = leaflet.default || leaflet;
-                    const bounds = L.latLngBounds(valid.map((s) => [s.latitude!, s.longitude!]));
-                    mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
-                  });
-                }
-              }}
-              className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl bg-white/95 backdrop-blur-md hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-md border border-slate-200/90 transition-all active:scale-95 touch-press"
-              title="ซูมแสดงเส้นทางและจุดหมายทั้งหมดบนแผนที่"
-            >
-              <span>🧭</span>
-              <span className="hidden sm:inline">ดูเส้นทาง</span>
-            </button>
-          )}
-
-          <Link
-            href="/planner"
-            className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs shadow-lg shadow-blue-600/30 hover:shadow-xl transition-all active:scale-95 touch-press"
-            title="เปิดดูแผนงานและระยะทางวิ่งรถประจำวัน"
-          >
-            <Car className="w-3.5 h-3.5" />
-            <span>แผนงาน ({todayPlan.stops.length})</span>
-            {todayRouteStats.totalKm > 0 && (
-              <span className="bg-white/25 text-white font-extrabold px-1.5 py-0.2 rounded-md text-[10px]">
-                ~{todayRouteStats.totalKm} กม.
-              </span>
-            )}
-          </Link>
-        </div>
-
-        {/* Toast Notification for Adding to Plan */}
-        {planToastMsg && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-150 max-w-sm">
-            <span>{planToastMsg}</span>
-            <Link href="/planner" className="underline text-blue-400 hover:text-blue-300 ml-1 shrink-0">
-              ดูแผนงาน ➔
-            </Link>
-          </div>
-        )}
 
         {/* Floating Selected Factory Action Card on Mobile */}
         {selectedFactory && !showDrawer && (() => {
@@ -1497,13 +1186,6 @@ function normalizeDistrictName(raw?: string | null): string {
                   selectedFactory.longitude
                 )
               : null;
-
-          const plannedIndex = todayPlan.stops.findIndex((s) => {
-            if (selectedFactory.crm_id && selectedFactory.crm_id > 0 && s.customerId && s.customerId === selectedFactory.crm_id) return true;
-            if (s.companyName && selectedFactory.name && s.companyName.trim().toLowerCase() === selectedFactory.name.trim().toLowerCase()) return true;
-            return false;
-          });
-          const isAlreadyInPlan = plannedIndex !== -1;
 
           return (
             <div className="sm:hidden fixed mobile-action-card-position left-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-slate-200/90 shadow-2xl animate-slide-up space-y-2 max-h-[70vh] overflow-y-auto">
@@ -1539,46 +1221,6 @@ function normalizeDistrictName(raw?: string | null): string {
                 >
                   <X className="w-4 h-4" />
                 </button>
-              </div>
-
-              {/* Add to Route / Advance Planning Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleAddFactoryToPlan(selectedFactory, new Date().toISOString().split('T')[0])}
-                  className={`py-2 px-2 rounded-xl font-bold text-[11px] flex items-center justify-center space-x-1 transition-all shadow-xs active:scale-[0.98] ${
-                    isAlreadyInPlan
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  <span>🚗</span>
-                  <span>{isAlreadyInPlan ? `✓ อยู่ในแผนวันนี้ (#${plannedIndex + 1})` : '+ แผนวันนี้'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + 1);
-                    handleAddFactoryToPlan(selectedFactory, d.toISOString().split('T')[0]);
-                  }}
-                  className="py-2 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-xs transition-all active:scale-[0.98] flex items-center justify-center space-x-1"
-                >
-                  <span>⏩</span>
-                  <span>+ แผนพรุ่งนี้</span>
-                </button>
-                <label className="relative col-span-2 sm:col-span-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200 transition-all flex items-center justify-center space-x-1 cursor-pointer">
-                  <span>📅</span>
-                  <span>เลือกวันอื่น...</span>
-                  <input
-                    type="date"
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => {
-                      if (e.target.value) handleAddFactoryToPlan(selectedFactory, e.target.value);
-                    }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                </label>
               </div>
 
               {/* Quick Action Buttons */}
@@ -1758,7 +1400,6 @@ function normalizeDistrictName(raw?: string | null): string {
                 const isContacted =
                   (fact.activities_count !== undefined && fact.activities_count > 0) ||
                   (fact.pipeline_stage && fact.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
-                const inPort = isCustomerInPortfolio(getCustomerFromFactory(fact), portfolioIds);
 
                 return (
                   <div
@@ -1776,12 +1417,6 @@ function normalizeDistrictName(raw?: string | null): string {
                           <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
                             {fact.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
                           </span>
-                          {inPort && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
-                              <span>ในพอร์ต</span>
-                            </span>
-                          )}
                           {fact.activities_count !== undefined && fact.activities_count > 0 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                               ✓ {fact.activities_count} กิจกรรม
@@ -1805,20 +1440,6 @@ function normalizeDistrictName(raw?: string | null): string {
                       </div>
 
                       <div className="flex items-center space-x-1 shrink-0">
-                        {fact.crm_id && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleTogglePortfolio(fact.crm_id, e)}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              inPort
-                                ? 'text-amber-500 bg-amber-50 hover:bg-amber-100'
-                                : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'
-                            }`}
-                            title={inPort ? 'อยู่ในพอร์ตของคุณ' : 'ดึงเข้าพอร์ตลูกค้าโฟกัส'}
-                          >
-                            <Star className={`w-4 h-4 ${inPort ? 'fill-amber-400' : ''}`} />
-                          </button>
-                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1893,38 +1514,6 @@ function normalizeDistrictName(raw?: string | null): string {
         />
       )}
 
-      {/* Create New Factory Modal */}
-      <CustomerFormModal
-        isOpen={isCreateModalOpen}
-        customer={null}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSaved={(newCustomer) => {
-          setRawCustomers((prev) => [newCustomer, ...prev]);
-          const newFact: UnifiedFactory = {
-            id: `crm_${newCustomer.id}`,
-            crm_id: newCustomer.id,
-            name: newCustomer.name,
-            phone: newCustomer.phone,
-            address: newCustomer.address,
-            district: newCustomer.district,
-            province: newCustomer.province || 'สมุทรปราการ',
-            website: newCustomer.website,
-            google_maps_url: newCustomer.google_maps_url,
-            latitude: newCustomer.latitude,
-            longitude: newCustomer.longitude,
-            business_type: newCustomer.business_type,
-            pipeline_stage: newCustomer.pipeline_stage || 'ยังไม่ได้ติดต่อ',
-            contact_person: newCustomer.contact_person,
-            target_product: newCustomer.target_product,
-            notes: newCustomer.notes,
-            email: newCustomer.email,
-            is_crm: true,
-          };
-          setSelectedFactory(newFact);
-          flyToFactory(newFact);
-        }}
-      />
-
       {/* Email Compose Modal */}
       <EmailComposeModal
         isOpen={isEmailModalOpen}
@@ -1940,14 +1529,6 @@ function normalizeDistrictName(raw?: string | null): string {
             handleSaveAndSyncCustomer(updatedCust);
           }
         }}
-      />
-
-      {/* Daily Report Generator Modal */}
-      <DailyReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        plan={todayPlan}
-        selectedDate={new Date().toISOString().split('T')[0]}
       />
     </div>
   );
