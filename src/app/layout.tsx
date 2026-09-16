@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   title: "Chicai-Sales - ระบบบริหารงานขาย & แผนที่ลูกค้า",
   description: "ระบบบริหารงานขายและแผนที่โรงงานอุตสาหกรรมสำหรับทีมขาย",
   applicationName: "Chicai Sales",
+  icons: {
+    icon: "/images/logo.png",
+    apple: "/images/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -25,7 +29,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#1e40af",
+  themeColor: "#1b9b8e",
 };
 
 export default function RootLayout({

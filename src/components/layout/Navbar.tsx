@@ -22,8 +22,8 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1b9b8e] to-teal-700 flex items-center justify-center text-white font-bold shadow-md shadow-[#1b9b8e]/20 group-hover:scale-105 transition-transform">
-                <MapPin className="w-5 h-5" />
+              <div className="h-9 px-2 py-1 rounded-xl bg-slate-900/5 flex items-center justify-center border border-slate-200/60 shadow-xs group-hover:scale-105 transition-transform">
+                <img src="/images/logo.png" alt="Chicai Logo" className="h-7 w-auto object-contain" />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
@@ -61,11 +61,11 @@ export default function Navbar() {
 
       {/* 2. Mobile Top App Bar (Only visible on Mobile when not on Map page) */}
       {!isMapPage && (
-        <div className="sm:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 safe-top shadow-xs">
+        <div className="sm:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2.5 safe-top shadow-xs">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#1b9b8e] to-teal-700 flex items-center justify-center text-white font-bold shadow-sm shadow-[#1b9b8e]/30">
-                <MapPin className="w-4 h-4" />
+              <div className="h-8 px-1.5 py-0.5 rounded-lg bg-slate-900/5 flex items-center justify-center border border-slate-200/60 shadow-xs">
+                <img src="/images/logo.png" alt="Chicai Logo" className="h-6 w-auto object-contain" />
               </div>
               <span className="font-extrabold text-sm text-slate-900 tracking-tight">Chicai Sales</span>
             </Link>

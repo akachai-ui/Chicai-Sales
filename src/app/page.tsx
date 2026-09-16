@@ -75,9 +75,14 @@ export default function HomePage() {
         {/* Hero Banner / Mobile Welcome Card */}
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1b9b8e] via-teal-800 to-slate-900 text-white p-5 sm:p-10 shadow-lg sm:shadow-xl shadow-teal-900/10">
           <div className="relative z-10 max-w-2xl space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold text-teal-200">
-              <Sparkles className="w-3 h-3 text-teal-300" />
-              <span>Chicai Field CRM & Smart Map</span>
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+              <div className="inline-flex items-center bg-white/95 rounded-xl px-2.5 py-1 shadow-sm">
+                <img src="/images/logo.png" alt="Chicai Logo" className="h-5 w-auto object-contain" />
+              </div>
+              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold text-teal-200">
+                <Sparkles className="w-3 h-3 text-teal-300" />
+                <span>Chicai Field CRM & Smart Map</span>
+              </div>
             </div>
             <h1 className="text-xl sm:text-4xl font-extrabold tracking-tight leading-tight">
               ระบบบริหารงานขาย & แผนที่โรงงาน
