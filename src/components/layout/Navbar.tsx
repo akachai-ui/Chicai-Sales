@@ -22,8 +22,8 @@ export default function Navbar() {
     { name: 'แผนที่', href: '/map', icon: MapPin, label: 'แผนที่' },
     { name: 'วางแผนงาน', href: '/planner', icon: Navigation, label: 'แผนงาน' },
     { name: 'ค้นหา DBD', href: '/dbd-leads', icon: Sparkles, label: 'คลัง DBD' },
-    { name: 'ลูกค้า', href: '/customers', icon: Users, label: 'ลูกค้า' },
-    { name: 'ประวัติ', href: '/activities', icon: Layers, label: 'กิจกรรม' },
+    { name: 'ลูกค้าในพอร์ต', href: '/customers', icon: Users, label: 'ในพอร์ต' },
+    { name: 'กิจกรรม CRM', href: '/activities', icon: Layers, label: 'กิจกรรม' },
   ];
 
   const isMapPage = pathname === '/map';

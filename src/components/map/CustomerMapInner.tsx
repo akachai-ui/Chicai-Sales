@@ -32,9 +32,15 @@ import {
   Building2,
   Car,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getDailyPlan, addCustomerToDailyPlan } from '@/lib/planner-storage';
+import {
+  getPortfolioCustomerIds,
+  togglePortfolioCustomerId,
+  isCustomerInPortfolio,
+} from '@/lib/portfolio-storage';
 import {
   calculateDistanceKm,
   formatDistanceThai,
@@ -264,7 +270,21 @@ export default function CustomerMapInner({
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
   const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
+  const [onlyPortfolio, setOnlyPortfolio] = useState<boolean>(false);
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
   const [showZones, setShowZones] = useState(true);
+
+  // Load portfolio customer IDs on mount
+  useEffect(() => {
+    setPortfolioIds(getPortfolioCustomerIds());
+  }, []);
+
+  const handleTogglePortfolio = (customerId?: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!customerId) return;
+    togglePortfolioCustomerId(customerId);
+    setPortfolioIds(getPortfolioCustomerIds());
+  };
 
   // Drawer
   const [showDrawer, setShowDrawer] = useState(true);
@@ -429,21 +449,28 @@ function normalizeDistrictName(raw?: string | null): string {
   return s;
 }
 
-  // Summary counts of contacted vs uncontacted and with email
+  // Summary counts of contacted vs uncontacted, with email, and in portfolio
   const statsSummary = useMemo(() => {
     let contacted = 0;
     let uncontacted = 0;
     let withEmail = 0;
+    let portfolioCount = 0;
+
     unifiedFactories.forEach((f) => {
       if (f.email && f.email.trim()) withEmail++;
+      const custObj = getCustomerFromFactory(f);
+      if (isCustomerInPortfolio(custObj, portfolioIds)) {
+        portfolioCount++;
+      }
+
       const hasContact =
         (f.activities_count !== undefined && f.activities_count > 0) ||
         (f.pipeline_stage && f.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
       if (hasContact) contacted++;
       else uncontacted++;
     });
-    return { contacted, uncontacted, withEmail, total: unifiedFactories.length };
-  }, [unifiedFactories]);
+    return { contacted, uncontacted, withEmail, portfolioCount, total: unifiedFactories.length };
+  }, [unifiedFactories, portfolioIds]);
 
   // Generate District Zones automatically from all unified points
   const districtZones = useMemo(() => {
@@ -463,6 +490,13 @@ function normalizeDistrictName(raw?: string | null): string {
   const filteredFactories = useMemo(() => {
     return unifiedFactories.filter((f) => {
       if (!f.latitude || !f.longitude) return false;
+
+      // Portfolio Focus Filter
+      if (onlyPortfolio) {
+        const custObj = getCustomerFromFactory(f);
+        if (!isCustomerInPortfolio(custObj, portfolioIds)) return false;
+      }
+
       if (selectedDistrict !== 'ALL' && f.district !== selectedDistrict) return false;
       if (selectedStage !== 'ALL' && f.pipeline_stage !== selectedStage) return false;
 
@@ -486,7 +520,7 @@ function normalizeDistrictName(raw?: string | null): string {
       }
       return true;
     });
-  }, [unifiedFactories, selectedDistrict, selectedStage, contactFilter, searchQuery]);
+  }, [unifiedFactories, onlyPortfolio, portfolioIds, selectedDistrict, selectedStage, contactFilter, searchQuery]);
 
   // Fly to Factory
   const flyToFactory = useCallback((factory: UnifiedFactory) => {
@@ -1226,9 +1260,28 @@ function normalizeDistrictName(raw?: string | null): string {
             {/* Quick Status Filter Pills */}
             <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-md shadow-md rounded-2xl border border-slate-200/80 p-1 shrink-0 overflow-x-auto no-scrollbar">
               <button
-                onClick={() => setContactFilter('ALL')}
+                onClick={() => setOnlyPortfolio(!onlyPortfolio)}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all touch-press ${
+                  onlyPortfolio
+                    ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-300'
+                    : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/70'
+                }`}
+                title="แสดงเฉพาะลูกค้าในพอร์ตโฟลิโอของคุณ"
+              >
+                <Star className={`w-3.5 h-3.5 ${onlyPortfolio ? 'fill-white text-white' : 'fill-amber-400 text-amber-500'}`} />
+                <span>ในพอร์ต</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${onlyPortfolio ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'}`}>
+                  {statsSummary.portfolioCount}
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setContactFilter('ALL');
+                  setOnlyPortfolio(false);
+                }}
                 className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
-                  contactFilter === 'ALL'
+                  contactFilter === 'ALL' && !onlyPortfolio
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
@@ -1705,6 +1758,7 @@ function normalizeDistrictName(raw?: string | null): string {
                 const isContacted =
                   (fact.activities_count !== undefined && fact.activities_count > 0) ||
                   (fact.pipeline_stage && fact.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
+                const inPort = isCustomerInPortfolio(getCustomerFromFactory(fact), portfolioIds);
 
                 return (
                   <div
@@ -1722,6 +1776,12 @@ function normalizeDistrictName(raw?: string | null): string {
                           <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
                             {fact.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
                           </span>
+                          {inPort && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
+                              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                              <span>ในพอร์ต</span>
+                            </span>
+                          )}
                           {fact.activities_count !== undefined && fact.activities_count > 0 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                               ✓ {fact.activities_count} กิจกรรม
@@ -1744,19 +1804,35 @@ function normalizeDistrictName(raw?: string | null): string {
                         </p>
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFactory(fact);
-                          setIsDetailModalOpen(true);
-                        }}
-                        className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600'
-                        }`}
-                        title="ดูรายละเอียด & บันทึกงานขาย"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {fact.crm_id && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePortfolio(fact.crm_id, e)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              inPort
+                                ? 'text-amber-500 bg-amber-50 hover:bg-amber-100'
+                                : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'
+                            }`}
+                            title={inPort ? 'อยู่ในพอร์ตของคุณ' : 'ดึงเข้าพอร์ตลูกค้าโฟกัส'}
+                          >
+                            <Star className={`w-4 h-4 ${inPort ? 'fill-amber-400' : ''}`} />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFactory(fact);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className={`p-1.5 rounded-lg shrink-0 transition-colors ${
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600'
+                          }`}
+                          title="ดูรายละเอียด & บันทึกงานขาย"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     {(fact.phone || fact.email) && (
