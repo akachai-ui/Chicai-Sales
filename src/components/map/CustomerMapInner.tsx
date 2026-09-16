@@ -40,6 +40,15 @@ import {
   formatDrivingTimeThai,
   estimateDrivingTimeMinutes,
 } from '@/lib/geo-distance';
+import {
+  getMyPortfolioIds,
+  addToPortfolio,
+  removeFromPortfolio,
+  togglePortfolio,
+  subscribeToPortfolioChanges,
+  isCustomerInPortfolio,
+} from '@/lib/portfolio';
+import { useSearchParams } from 'next/navigation';
 
 interface UnifiedFactory {
   id: string; // 'crm_123' or 'dbd_456'
@@ -254,15 +263,33 @@ export default function CustomerMapInner({
   initialCustomers,
   initialDbdCompanies = [],
 }: CustomerMapInnerProps) {
+  const searchParams = useSearchParams();
   const [rawCustomers, setRawCustomers] = useState<Customer[]>(initialCustomers);
   const [rawDbdCompanies, setRawDbdCompanies] = useState<DBDCompany[]>(initialDbdCompanies);
+
+  // Portfolio state
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
-  const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
+  const [contactFilter, setContactFilter] = useState<'ALL' | 'PORTFOLIO' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
   const [showZones, setShowZones] = useState(true);
+
+  // Sync portfolio from localStorage / events
+  useEffect(() => {
+    setPortfolioIds(getMyPortfolioIds());
+    const unsub = subscribeToPortfolioChanges((ids) => {
+      setPortfolioIds(ids);
+    });
+
+    if (searchParams?.get('portfolio') === 'true') {
+      setContactFilter('PORTFOLIO');
+    }
+
+    return () => unsub();
+  }, [searchParams]);
 
   // Convert UnifiedFactory to Customer object for modal compatibility
   const getCustomerFromFactory = useCallback((f: UnifiedFactory): Customer => {
@@ -433,14 +460,16 @@ function normalizeDistrictName(raw?: string | null): string {
   return s;
 }
 
-  // Summary counts of contacted vs uncontacted, and with email
+  // Summary counts of contacted vs uncontacted, with email, and in portfolio
   const statsSummary = useMemo(() => {
     let contacted = 0;
     let uncontacted = 0;
     let withEmail = 0;
+    let inPortfolio = 0;
 
     unifiedFactories.forEach((f) => {
       if (f.email && f.email.trim()) withEmail++;
+      if (isCustomerInPortfolio(f.crm_id, portfolioIds)) inPortfolio++;
 
       const hasContact =
         (f.activities_count !== undefined && f.activities_count > 0) ||
@@ -448,8 +477,8 @@ function normalizeDistrictName(raw?: string | null): string {
       if (hasContact) contacted++;
       else uncontacted++;
     });
-    return { contacted, uncontacted, withEmail, total: unifiedFactories.length };
-  }, [unifiedFactories]);
+    return { contacted, uncontacted, withEmail, inPortfolio, total: unifiedFactories.length };
+  }, [unifiedFactories, portfolioIds]);
 
   // Generate District Zones automatically from all unified points
   const districtZones = useMemo(() => {
@@ -472,6 +501,12 @@ function normalizeDistrictName(raw?: string | null): string {
 
       if (selectedDistrict !== 'ALL' && f.district !== selectedDistrict) return false;
       if (selectedStage !== 'ALL' && f.pipeline_stage !== selectedStage) return false;
+
+      // Portfolio Filter
+      if (contactFilter === 'PORTFOLIO') {
+        const inPort = isCustomerInPortfolio(f.crm_id, portfolioIds);
+        if (!inPort) return false;
+      }
 
       // Contact Status Filter
       const hasContact =
@@ -1045,6 +1080,21 @@ function normalizeDistrictName(raw?: string | null): string {
                 ทั้งหมด ({statsSummary.total})
               </button>
               <button
+                onClick={() => setContactFilter(contactFilter === 'PORTFOLIO' ? 'ALL' : 'PORTFOLIO')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
+                  contactFilter === 'PORTFOLIO'
+                    ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-300'
+                    : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
+                }`}
+                title="แสดงเฉพาะโรงงานที่อยู่ในพอร์ตของฉัน"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                <span>ในพอร์ต</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${contactFilter === 'PORTFOLIO' ? 'bg-white/30 text-white' : 'bg-amber-200/60 text-amber-900'}`}>
+                  {statsSummary.inPortfolio}
+                </span>
+              </button>
+              <button
                 onClick={() => setContactFilter('CONTACTED')}
                 className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
                   contactFilter === 'CONTACTED'
@@ -1224,7 +1274,29 @@ function normalizeDistrictName(raw?: string | null): string {
               </div>
 
               {/* Quick Action Buttons */}
-              <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
+              <div className="grid grid-cols-5 gap-1 pt-1 border-t border-slate-100">
+                {(() => {
+                  const inPort = isCustomerInPortfolio(getCustomerFromFactory(selectedFactory), portfolioIds);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cust = getCustomerFromFactory(selectedFactory);
+                        togglePortfolio(cust.id);
+                      }}
+                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press active:scale-95 transition-all ${
+                        inPort
+                          ? 'bg-amber-500 text-white shadow-sm'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200/80 hover:bg-amber-100'
+                      }`}
+                      title={inPort ? 'อยู่ในพอร์ตแล้ว (คลิกเพื่อเอาออก)' : 'เพิ่มเข้าพอร์ตของฉัน'}
+                    >
+                      <Star className={`w-3.5 h-3.5 mb-0.5 ${inPort ? 'fill-current' : ''}`} />
+                      <span>{inPort ? 'ในพอร์ต' : '+ พอร์ต'}</span>
+                    </button>
+                  );
+                })()}
+
                 {selectedFactory.phone ? (
                   <a
                     href={`tel:${selectedFactory.phone.replace(/\s+/g, '')}`}
@@ -1293,7 +1365,7 @@ function normalizeDistrictName(raw?: string | null): string {
         })()}
 
         {/* Floating Bottom Status Bar (Desktop only) */}
-        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/80 rounded-2xl p-3 hidden md:block max-w-xl">
+        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/80 rounded-2xl p-3 hidden md:block max-w-2xl">
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span>แผนที่โรงงานอัจฉริยะ (Smart Map)</span>
             <span>แสดง {filteredFactories.length} / {unifiedFactories.length} โรงงาน</span>
@@ -1308,6 +1380,17 @@ function normalizeDistrictName(raw?: string | null): string {
               }`}
             >
               <span>ทั้งหมด ({statsSummary.total})</span>
+            </button>
+            <button
+              onClick={() => setContactFilter(contactFilter === 'PORTFOLIO' ? 'ALL' : 'PORTFOLIO')}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all ${
+                contactFilter === 'PORTFOLIO'
+                  ? 'bg-amber-500 text-white border-amber-500 ring-2 ring-amber-300'
+                  : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <span>ลูกค้าในพอร์ต ({statsSummary.inPortfolio})</span>
             </button>
             <button
               onClick={() => setContactFilter(contactFilter === 'CONTACTED' ? 'ALL' : 'CONTACTED')}
@@ -1440,6 +1523,27 @@ function normalizeDistrictName(raw?: string | null): string {
                       </div>
 
                       <div className="flex items-center space-x-1 shrink-0">
+                        {(() => {
+                          const cust = getCustomerFromFactory(fact);
+                          const inPort = isCustomerInPortfolio(cust, portfolioIds);
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePortfolio(cust.id);
+                              }}
+                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${
+                                inPort
+                                  ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                                  : 'bg-slate-100 hover:bg-amber-50 text-slate-400 hover:text-amber-600'
+                              }`}
+                              title={inPort ? 'อยู่ในพอร์ตแล้ว (คลิกเพื่อเอาออก)' : 'เพิ่มเข้าพอร์ต'}
+                            >
+                              <Star className={`w-4 h-4 ${inPort ? 'fill-amber-500 text-amber-500' : ''}`} />
+                            </button>
+                          );
+                        })()}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

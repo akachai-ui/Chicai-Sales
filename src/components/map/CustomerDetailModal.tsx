@@ -4,6 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import { supabase } from '@/lib/supabase';
 import { getDbdSearchUrl } from '@/lib/utils';
+import {
+  getMyPortfolioIds,
+  togglePortfolio,
+  isCustomerInPortfolio,
+  subscribeToPortfolioChanges,
+} from '@/lib/portfolio';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
 import {
@@ -51,6 +57,15 @@ export default function CustomerDetailModal({
   const [notes, setNotes] = useState(customer.notes || '');
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savedCustomerSuccess, setSavedCustomerSuccess] = useState(false);
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    setPortfolioIds(getMyPortfolioIds());
+    const unsub = subscribeToPortfolioChanges(() => {
+      setPortfolioIds(getMyPortfolioIds());
+    });
+    return unsub;
+  }, []);
 
   // Email Modal State
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -161,12 +176,33 @@ export default function CustomerDetailModal({
                   {customer.name}
                 </h2>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/60 transition-colors shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-1.5 shrink-0">
+                {(() => {
+                  const inPort = isCustomerInPortfolio(customer, portfolioIds);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => togglePortfolio(customer.id)}
+                      className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl font-bold text-xs transition-all touch-press ${
+                        inPort
+                          ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                      }`}
+                      title={inPort ? 'อยู่ในพอร์ตแล้ว (คลิกเพื่อเอาออก)' : 'เพิ่มเข้าพอร์ตของฉัน'}
+                    >
+                      <Star className={`w-4 h-4 ${inPort ? 'fill-current' : ''}`} />
+                      <span className="hidden sm:inline">{inPort ? 'อยู่ในพอร์ตแล้ว' : 'เพิ่มเข้าพอร์ต'}</span>
+                      <span className="sm:hidden">{inPort ? 'ในพอร์ต' : '+พอร์ต'}</span>
+                    </button>
+                  );
+                })()}
+                <button
+                  onClick={onClose}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/60 transition-colors shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Action Bar (Phone, Mail, Maps, DBD) */}
