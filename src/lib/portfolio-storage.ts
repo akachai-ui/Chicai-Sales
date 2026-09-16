@@ -24,6 +24,15 @@ export function savePortfolioCustomerIds(ids: number[]): void {
   }
 }
 
+export function clearAllPortfolioCustomerIds(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(PORTFOLIO_STORAGE_KEY);
+  } catch (e) {
+    console.error('Error clearing portfolio ids:', e);
+  }
+}
+
 export function togglePortfolioCustomerId(customerId: number): boolean {
   if (!customerId || customerId <= 0) return false;
   const current = getPortfolioCustomerIds();

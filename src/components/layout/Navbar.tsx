@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   MapPin,
   Users,
@@ -11,11 +11,30 @@ import {
   Sparkles,
   Plus,
   Navigation,
-  CalendarCheck
+  CalendarCheck,
+  RotateCcw,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
+import { resetAllCrmAndPlannerData } from '@/lib/reset-helper';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      await resetAllCrmAndPlannerData();
+      setShowResetModal(false);
+      window.location.href = '/';
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการรีเซ็ตข้อมูล');
+      setIsResetting(false);
+    }
+  };
 
   const navItems = [
     { name: 'หน้าหลัก', href: '/', icon: LayoutDashboard, label: 'หน้าหลัก' },
@@ -52,26 +71,38 @@ export default function Navbar() {
               </div>
             </Link>
 
-            <nav className="flex items-center space-x-1 sm:space-x-2">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            <div className="flex items-center space-x-2">
+              <nav className="flex items-center space-x-1 sm:space-x-1.5">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <button
+                type="button"
+                onClick={() => setShowResetModal(true)}
+                title="รีเซ็ตข้อมูลทั้งหมด (พอร์ต/แผนงาน/กิจกรรม)"
+                aria-label="รีเซ็ตข้อมูลทั้งหมด (พอร์ต/แผนงาน/กิจกรรม)"
+                className="ml-2 p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-200"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -93,6 +124,15 @@ export default function Navbar() {
               </div>
             </Link>
             <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(true)}
+                title="รีเซ็ตข้อมูลทั้งหมด"
+                aria-label="รีเซ็ตข้อมูลทั้งหมด"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 touch-press border border-slate-200"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
               <Link
                 href="/map"
                 className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 text-[11px] font-bold touch-press"
@@ -141,6 +181,61 @@ export default function Navbar() {
           })}
         </nav>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 scale-100">
+            <div className="flex items-center space-x-3 text-rose-600 mb-4">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">รีเซ็ตข้อมูลเริ่มต้น</h3>
+                <p className="text-xs text-rose-600 font-medium">ล้างข้อมูลเพื่อเริ่มใหม่อย่างสมบูรณ์</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 mb-5 text-xs text-rose-900 space-y-1.5">
+              <p className="font-bold">รายการที่จะถูกลบ/ล้างข้อมูลทั้งหมด:</p>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-rose-800">
+                <li>ลูกค้าในพอร์ตที่เลือกไว้ทั้งหมด (Portfolio)</li>
+                <li>ตารางแผนการเดินทาง และจุดแวะทุกวัน (Daily Planner)</li>
+                <li>ประวัติกิจกรรม CRM, บันทึกการโทร และสถานะดีลทั้งหมด</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleReset}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold shadow-md shadow-rose-600/30 transition-all disabled:opacity-50"
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>กำลังล้างข้อมูล...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>ยืนยันลบและเริ่มใหม่</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -50,6 +50,22 @@ export function saveDailyPlan(plan: DailyPlan): void {
   localStorage.setItem(`${STORAGE_PREFIX}${plan.date}`, JSON.stringify(updatedPlan));
 }
 
+export function clearAllDailyPlans(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(STORAGE_PREFIX) || key.startsWith('CHICAI_'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.error('Error clearing daily plans:', e);
+  }
+}
+
 // Add a customer to today's plan
 export function addCustomerToDailyPlan(
   customer: Customer,
