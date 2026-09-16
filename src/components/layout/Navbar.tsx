@@ -22,13 +22,13 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1b9b8e] to-teal-700 flex items-center justify-center text-white font-bold shadow-md shadow-[#1b9b8e]/20 group-hover:scale-105 transition-transform">
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="font-bold text-lg text-slate-900 tracking-tight">Chicai Sales</span>
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-teal-50 text-[#148277] border border-teal-200">
                     Field Map & CRM
                   </span>
                 </div>
@@ -45,7 +45,7 @@ export default function Navbar() {
                     href={item.href}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                        ? 'bg-[#1b9b8e] text-white shadow-sm shadow-[#1b9b8e]/30'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
@@ -64,7 +64,7 @@ export default function Navbar() {
         <div className="sm:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 safe-top shadow-xs">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-blue-500/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#1b9b8e] to-teal-700 flex items-center justify-center text-white font-bold shadow-sm shadow-[#1b9b8e]/30">
                 <MapPin className="w-4 h-4" />
               </div>
               <span className="font-extrabold text-sm text-slate-900 tracking-tight">Chicai Sales</span>
@@ -72,7 +72,7 @@ export default function Navbar() {
             <div className="flex items-center space-x-1.5">
               <Link
                 href="/map"
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs touch-press"
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-[#1b9b8e] text-white text-xs font-bold shadow-xs touch-press"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>เปิดแผนที่</span>
@@ -93,25 +93,25 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center justify-center py-1 touch-press relative transition-all ${
-                  isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#1b9b8e]' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
                 <div
                   className={`w-12 h-6 flex items-center justify-center rounded-full transition-all ${
-                    isActive ? 'bg-blue-100 text-blue-700 scale-105' : 'text-slate-500'
+                    isActive ? 'bg-teal-50 text-[#148277] scale-105' : 'text-slate-500'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                 </div>
                 <span
                   className={`text-[11px] font-bold tracking-tight mt-0.5 truncate ${
-                    isActive ? 'text-blue-700 font-extrabold' : 'text-slate-500'
+                    isActive ? 'text-[#148277] font-extrabold' : 'text-slate-500'
                   }`}
                 >
                   {item.label}
                 </span>
                 {isActive && (
-                  <span className="absolute top-1 right-1/3 w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <span className="absolute top-1 right-1/3 w-1.5 h-1.5 rounded-full bg-[#1b9b8e]" />
                 )}
               </Link>
             );

@@ -82,13 +82,13 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
     (factory.activities_count !== undefined && factory.activities_count > 0) ||
     (stage && stage !== 'ยังไม่ได้ติดต่อ');
 
-  let pinColor = '#3b82f6'; // default uncontacted: modern royal blue
+  let pinColor = '#1b9b8e'; // default uncontacted: modern Persian Green / Teal
   let isContacted = false;
 
   if (hasContact) {
     isContacted = true;
     if (stage.includes('ติดต่อแล้ว') || stage.includes('ติดตามงาน')) pinColor = '#f59e0b'; // vibrant amber
-    else if (stage.includes('นัดหมาย') || stage.includes('Demo')) pinColor = '#2563eb'; // blue
+    else if (stage.includes('นัดหมาย') || stage.includes('Demo')) pinColor = '#0284c7'; // cyan/blue
     else if (stage.includes('เสนอราคา')) pinColor = '#7c3aed'; // purple
     else if (stage.includes('สำเร็จ') || stage.includes('ปิดการขาย')) pinColor = '#059669'; // emerald
     else if (stage.includes('ไม่สนใจ') || stage.includes('ไม่ได้')) pinColor = '#e11d48'; // rose
@@ -99,8 +99,8 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
     return `
       <div style="position: relative; width: 48px; height: 58px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; z-index: 99999;">
         <!-- Radar Pulse Waves -->
-        <div class="radar-ring" style="border-color: ${isContacted ? '#10b981' : '#3b82f6'};"></div>
-        <div class="radar-ring-2" style="border-color: ${isContacted ? '#10b981' : '#3b82f6'};"></div>
+        <div class="radar-ring" style="border-color: ${isContacted ? '#10b981' : '#1b9b8e'};"></div>
+        <div class="radar-ring-2" style="border-color: ${isContacted ? '#10b981' : '#1b9b8e'};"></div>
 
         <!-- Floating Name Tag Badge -->
         <div style="
@@ -116,7 +116,7 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
           font-weight: 700;
           white-space: nowrap;
           box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-          border: 1.5px solid ${isContacted ? '#10b981' : '#60a5fa'};
+          border: 1.5px solid ${isContacted ? '#10b981' : '#1b9b8e'};
           display: flex;
           align-items: center;
           gap: 6px;
@@ -128,10 +128,10 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
         </div>
 
         <svg width="44" height="54" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));">
-          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${isContacted ? '#10b981' : '#60a5fa'}"/>
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${isContacted ? '#10b981' : '#1b9b8e'}"/>
           <path d="M16 2C8.268 2 2 8.268 2 16c0 10.5 14 21 14 21s14-10.5 14-21c0-7.732-6.268-14-14-14z" fill="${pinColor}"/>
           <circle cx="16" cy="15" r="7" fill="#ffffff"/>
-          <circle cx="16" cy="15" r="4" fill="${isContacted ? '#10b981' : '#3b82f6'}"/>
+          <circle cx="16" cy="15" r="4" fill="${isContacted ? '#10b981' : '#1b9b8e'}"/>
         </svg>
       </div>
     `;
@@ -175,10 +175,10 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
   return `
     <div style="position: relative; width: 26px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.92;">
       <svg width="24" height="30" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.15s ease;">
-        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="#2563eb"/>
+        <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="#1b9b8e"/>
         <path d="M13 1.5C6.65 1.5 1.5 6.65 1.5 13c0 8.5 11.5 17 11.5 17s11.5-8.5 11.5-17c0-6.35-5.15-11.5-11.5-11.5z" stroke="#ffffff" stroke-width="1"/>
         <circle cx="13" cy="12" r="4.5" fill="#ffffff"/>
-        <circle cx="13" cy="12" r="2.5" fill="#2563eb"/>
+        <circle cx="13" cy="12" r="2.5" fill="#1b9b8e"/>
       </svg>
     </div>
   `;
@@ -187,17 +187,17 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
 // Function to generate clean Cluster bubble
 function createClusterIcon(count: number) {
   let size = 36;
-  let bgGradient = 'linear-gradient(135deg, #2563eb, #1d4ed8)';
-  let shadow = 'rgba(37, 99, 235, 0.4)';
+  let bgGradient = 'linear-gradient(135deg, #1b9b8e, #148277)';
+  let shadow = 'rgba(27, 155, 142, 0.4)';
 
   if (count >= 100) {
     size = 48;
-    bgGradient = 'linear-gradient(135deg, #4f46e5, #3730a3)';
-    shadow = 'rgba(79, 70, 229, 0.5)';
+    bgGradient = 'linear-gradient(135deg, #116960, #13544e)';
+    shadow = 'rgba(17, 105, 96, 0.5)';
   } else if (count >= 30) {
     size = 42;
-    bgGradient = 'linear-gradient(135deg, #0284c7, #0369a1)';
-    shadow = 'rgba(2, 132, 199, 0.45)';
+    bgGradient = 'linear-gradient(135deg, #148277, #116960)';
+    shadow = 'rgba(20, 130, 119, 0.45)';
   }
 
   return `
@@ -1061,8 +1061,8 @@ function normalizeDistrictName(raw?: string | null): string {
                 onClick={() => setContactFilter('UNCONTACTED')}
                 className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
                   contactFilter === 'UNCONTACTED'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60'
+                    ? 'bg-[#1b9b8e] text-white shadow-xs'
+                    : 'text-[#148277] bg-teal-50 hover:bg-teal-100 border border-teal-200/60'
                 }`}
               >
                 <span>ยังไม่ได้ติดต่อ</span>
@@ -1110,7 +1110,7 @@ function normalizeDistrictName(raw?: string | null): string {
               {selectedDistrict !== 'ALL' && (
                 <button
                   onClick={() => setSelectedDistrict('ALL')}
-                  className="shrink-0 flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-blue-600 text-white shadow-xs touch-press"
+                  className="shrink-0 flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#1b9b8e] text-white shadow-xs touch-press"
                 >
                   <span>✕ ล้างโซน</span>
                 </button>
@@ -1142,7 +1142,7 @@ function normalizeDistrictName(raw?: string | null): string {
             title="ตำแหน่งของฉัน"
             className="w-10 h-10 bg-white/95 backdrop-blur-md hover:bg-slate-50 text-slate-700 shadow-md rounded-2xl border border-slate-200/80 flex items-center justify-center touch-press"
           >
-            <Crosshair className="w-5 h-5 text-blue-600" />
+            <Crosshair className="w-5 h-5 text-[#1b9b8e]" />
           </button>
 
           {/* Toggle Zone Borders */}
@@ -1164,12 +1164,12 @@ function normalizeDistrictName(raw?: string | null): string {
             title="แสดงรายชื่อโรงงาน"
             className={`w-10 h-10 rounded-2xl shadow-md border flex items-center justify-center touch-press relative transition-all ${
               showDrawer
-                ? 'bg-blue-600 text-white border-blue-600 shadow-blue-600/30'
+                ? 'bg-[#1b9b8e] text-white border-[#1b9b8e] shadow-[#1b9b8e]/30'
                 : 'bg-white/95 backdrop-blur-md text-slate-700 border-slate-200/80'
             }`}
           >
             <List className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-blue-600 text-white border border-white">
+            <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-[#1b9b8e] text-white border border-white">
               {filteredFactories.length}
             </span>
           </button>
@@ -1206,7 +1206,7 @@ function normalizeDistrictName(raw?: string | null): string {
                         ✓ {selectedFactory.pipeline_stage || 'ติดต่อแล้ว'}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-[#148277] border border-teal-100">
                         ⚪ ยังไม่ได้ติดต่อ
                       </span>
                     )}
@@ -1268,9 +1268,9 @@ function normalizeDistrictName(raw?: string | null): string {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 text-[10px] font-bold touch-press"
+                    className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#148277] border border-teal-200/80 text-[10px] font-bold touch-press"
                   >
-                    <Navigation className="w-3.5 h-3.5 mb-0.5 text-blue-600" />
+                    <Navigation className="w-3.5 h-3.5 mb-0.5 text-[#1b9b8e]" />
                     <span>นำทาง</span>
                   </a>
                 ) : (
@@ -1282,7 +1282,7 @@ function normalizeDistrictName(raw?: string | null): string {
 
                 <button
                   onClick={() => setIsDetailModalOpen(true)}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
                 >
                   <Edit className="w-3.5 h-3.5 mb-0.5" />
                   <span>บันทึก</span>
@@ -1324,11 +1324,11 @@ function normalizeDistrictName(raw?: string | null): string {
               onClick={() => setContactFilter(contactFilter === 'UNCONTACTED' ? 'ALL' : 'UNCONTACTED')}
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
                 contactFilter === 'UNCONTACTED'
-                  ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-400'
-                  : 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
+                  ? 'bg-[#1b9b8e] text-white border-[#1b9b8e] ring-2 ring-teal-400'
+                  : 'bg-teal-50 border-teal-200 text-[#148277] hover:bg-teal-100'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="w-2 h-2 rounded-full bg-[#1b9b8e]" />
               <span>ยังไม่ได้ติดต่อ ({statsSummary.uncontacted})</span>
             </button>
             <button
@@ -1359,7 +1359,7 @@ function normalizeDistrictName(raw?: string | null): string {
             <div className="space-y-1.5">
               <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-1.5">
                 <span>รายชื่อโรงงานในพื้นที่</span>
-                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-teal-100 text-[#148277] text-xs font-bold">
                   {filteredFactories.length}
                 </span>
               </h3>
@@ -1407,7 +1407,7 @@ function normalizeDistrictName(raw?: string | null): string {
                     onClick={() => flyToFactory(fact)}
                     className={`p-3 rounded-xl border transition-all cursor-pointer touch-press ${
                       isSelected
-                        ? 'bg-blue-50/95 border-blue-500 ring-2 ring-blue-500/40 shadow-md scale-[1.01]'
+                        ? 'bg-teal-50/95 border-[#1b9b8e] ring-2 ring-[#1b9b8e]/40 shadow-md scale-[1.01]'
                         : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50/60'
                     }`}
                   >
@@ -1423,13 +1423,13 @@ function normalizeDistrictName(raw?: string | null): string {
                             </span>
                           )}
                           {isSelected && (
-                            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-blue-600 text-white animate-pulse">
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#1b9b8e] text-white animate-pulse">
                               📍 กำลังเลือก
                             </span>
                           )}
                         </div>
 
-                        <h4 className={`font-bold text-xs leading-snug truncate ${isSelected ? 'text-blue-950 font-extrabold' : 'text-slate-900'}`}>
+                        <h4 className={`font-bold text-xs leading-snug truncate ${isSelected ? 'text-[#144641] font-extrabold' : 'text-slate-900'}`}>
                           {fact.name}
                         </h4>
 
@@ -1447,7 +1447,7 @@ function normalizeDistrictName(raw?: string | null): string {
                             setIsDetailModalOpen(true);
                           }}
                           className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600'
+                            isSelected ? 'bg-[#1b9b8e] text-white' : 'bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-[#148277]'
                           }`}
                           title="ดูรายละเอียด & บันทึกงานขาย"
                         >

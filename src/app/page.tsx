@@ -73,24 +73,24 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 w-full flex-1 space-y-4 sm:space-y-8">
         
         {/* Hero Banner / Mobile Welcome Card */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-5 sm:p-10 shadow-lg sm:shadow-xl shadow-blue-900/10">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1b9b8e] via-teal-800 to-slate-900 text-white p-5 sm:p-10 shadow-lg sm:shadow-xl shadow-teal-900/10">
           <div className="relative z-10 max-w-2xl space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold text-blue-200">
-              <Sparkles className="w-3 h-3 text-blue-300" />
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold text-teal-200">
+              <Sparkles className="w-3 h-3 text-teal-300" />
               <span>Chicai Field CRM & Smart Map</span>
             </div>
             <h1 className="text-xl sm:text-4xl font-extrabold tracking-tight leading-tight">
               ระบบบริหารงานขาย & แผนที่โรงงาน
             </h1>
-            <p className="text-xs sm:text-base text-blue-100/90 leading-relaxed">
+            <p className="text-xs sm:text-base text-teal-100/90 leading-relaxed">
               ติดตามสถานะลูกค้า วางแผนเส้นทางเข้าพบ และบันทึกประวัติการขาย 1,089 โรงงาน
             </p>
             <div className="flex flex-wrap gap-2 sm:gap-3 pt-1 sm:pt-2">
               <Link
                 href="/map"
-                className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-white text-blue-700 font-bold text-sm shadow-md hover:bg-blue-50 transition-all touch-press"
+                className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-white text-[#148277] font-bold text-sm shadow-md hover:bg-teal-50 transition-all touch-press"
               >
-                <MapPin className="w-4 h-4 text-blue-600" />
+                <MapPin className="w-4 h-4 text-[#1b9b8e]" />
                 <span>เปิดแผนที่โรงงาน</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -106,7 +106,7 @@ export default function HomePage() {
         <div className="sm:hidden">
           <Link
             href="/map"
-            className="w-full bg-blue-600 text-white p-3.5 rounded-2xl shadow-md flex items-center justify-center space-x-2 font-bold text-sm touch-press"
+            className="w-full bg-[#1b9b8e] text-white p-3.5 rounded-2xl shadow-md flex items-center justify-center space-x-2 font-bold text-sm touch-press"
           >
             <MapPin className="w-4 h-4" />
             <span>เข้าสู่ระบบแผนที่โรงงาน</span>
@@ -119,7 +119,7 @@ export default function HomePage() {
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1 sm:space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500">โรงงานทั้งหมด</span>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-[#148277] flex items-center justify-center">
                 <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
@@ -145,11 +145,11 @@ export default function HomePage() {
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1 sm:space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500">นัดหมาย Demo</span>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-[#148277] flex items-center justify-center">
                 <CalendarCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="text-xl sm:text-3xl font-black text-blue-600">
+            <div className="text-xl sm:text-3xl font-black text-[#1b9b8e]">
               {loading ? '...' : (stageStats['นัดหมาย Demo On-site'] || 0)}
             </div>
             <span className="text-[10px] sm:text-[11px] text-slate-400 block truncate">นัดสาธิตเครื่อง</span>
@@ -176,10 +176,10 @@ export default function HomePage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm sm:text-base text-slate-900 flex items-center space-x-2">
-                <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-[#1b9b8e]" />
                 <span>สถานะ Sales Pipeline ทั้งหมด</span>
               </h3>
-              <Link href="/map" className="text-xs font-semibold text-blue-600 hover:underline">
+              <Link href="/map" className="text-xs font-semibold text-[#148277] hover:underline">
                 ดูบนแผนที่
               </Link>
             </div>
@@ -213,10 +213,10 @@ export default function HomePage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm sm:text-base text-slate-900 flex items-center space-x-2">
-                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-[#1b9b8e]" />
                 <span>การกระจายตัวตามอำเภอ / โซน</span>
               </h3>
-              <Link href="/map" className="text-xs font-semibold text-blue-600 hover:underline">
+              <Link href="/map" className="text-xs font-semibold text-[#148277] hover:underline">
                 สำรวจพื้นที่
               </Link>
             </div>
@@ -226,10 +226,10 @@ export default function HomePage() {
                 <Link
                   key={district}
                   href={`/map`}
-                  className="p-3 sm:p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 transition-all group touch-press"
+                  className="p-3 sm:p-3.5 rounded-xl bg-slate-50 hover:bg-teal-50/50 border border-slate-200/80 hover:border-teal-200 transition-all group touch-press"
                 >
                   <span className="text-[10px] sm:text-xs text-slate-500 block">อำเภอ/โซน</span>
-                  <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-blue-600 truncate mt-0.5">
+                  <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#148277] truncate mt-0.5">
                     {district}
                   </div>
                   <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-1">
