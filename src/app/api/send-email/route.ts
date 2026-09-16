@@ -47,19 +47,9 @@ export async function POST(req: NextRequest) {
       gasData = { success: true, message: gasResultText };
     }
 
-    // 2. Automatically log activity into Supabase
+    // 2. Update pipeline stage in Supabase if previously uncontacted
     if (customerId) {
       try {
-        const today = new Date().toISOString().split('T')[0];
-        await supabase.from('customer_activities').insert({
-          customer_id: customerId,
-          activity_type: 'ส่งอีเมล',
-          activity_date: today,
-          contact_person: contactPerson || null,
-          details: `ส่งอีเมล E-Catalog CHICAI ELECTRIC (ลดต้นทุน 70% + On-site Demo) ถึง ${email.trim()}`,
-        });
-
-        // Update pipeline stage to 'ติดต่อแล้ว / ติดตามงาน' if previously uncontacted
         const { data: currentCust } = await supabase
           .from('customers')
           .select('pipeline_stage')
@@ -76,7 +66,7 @@ export async function POST(req: NextRequest) {
             .eq('id', customerId);
         }
       } catch (dbErr) {
-        console.error('Failed to log email activity in Supabase:', dbErr);
+        console.error('Failed to update customer pipeline stage in Supabase:', dbErr);
       }
     }
 

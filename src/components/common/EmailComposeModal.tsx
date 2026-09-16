@@ -74,35 +74,7 @@ export default function EmailComposeModal({
   const checkPreviousEmailHistory = async (cust: Customer) => {
     setCheckingHistory(true);
     try {
-      // 1. Check synchronous latest activity from customer prop
-      if (cust.latest_activity) {
-        setPreviousEmailLog(cust.latest_activity);
-      }
-
-      // 2. Fetch all activities for this customer from Supabase
-      const { data, error } = await supabase
-        .from("customer_activities")
-        .select("*")
-        .eq("customer_id", cust.id)
-        .order("activity_date", { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        // Find email-related activity or latest activity
-        const emailLog = data.find((act) => {
-          const t = (act.activity_type || "").toLowerCase();
-          const d = (act.details || "").toLowerCase();
-          return (
-            t.includes("เมล") ||
-            t.includes("email") ||
-            t.includes("ใบเสนอราคา") ||
-            d.includes("เมล") ||
-            d.includes("email") ||
-            d.includes("presenting") ||
-            d.includes("catalog")
-          );
-        });
-        setPreviousEmailLog(emailLog || data[0]);
-      } else if (cust.pipeline_stage && cust.pipeline_stage !== "ยังไม่ได้ติดต่อ") {
+      if (cust.pipeline_stage && cust.pipeline_stage !== "ยังไม่ได้ติดต่อ") {
         setPreviousEmailLog({
           id: 0,
           customer_id: cust.id,
@@ -117,10 +89,7 @@ export default function EmailComposeModal({
         setPreviousEmailLog(null);
       }
     } catch (err) {
-      console.error("Error checking email history:", err);
-      if (cust.latest_activity) {
-        setPreviousEmailLog(cust.latest_activity);
-      }
+      console.warn("Check email status:", err);
     } finally {
       setCheckingHistory(false);
     }
@@ -264,18 +233,9 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
           }),
         });
 
-        // Log activity directly into Supabase
+        // Update customer pipeline stage in Supabase
         if (customer.id) {
           try {
-            const today = new Date().toISOString().split("T")[0];
-            await supabase.from("customer_activities").insert({
-              customer_id: customer.id,
-              activity_type: "ส่งอีเมล",
-              activity_date: today,
-              contact_person: customer.contact_person || null,
-              details: `ส่งอีเมล E-Catalog CHICAI ELECTRIC (ลดต้นทุน 70% + On-site Demo) ถึง ${cleanToEmail}`,
-            });
-
             await supabase
               .from("customers")
               .update({
@@ -284,7 +244,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
               })
               .eq("id", customer.id);
           } catch (dbErr) {
-            console.error("Supabase log error:", dbErr);
+            console.error("Supabase update error:", dbErr);
           }
         }
         isSuccess = true;
@@ -316,18 +276,8 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
     )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(gmailUrl, "_blank");
 
-    // Optional: Log sending intent to Supabase
     if (customer.id) {
       try {
-        const today = new Date().toISOString().split("T")[0];
-        await supabase.from("customer_activities").insert({
-          customer_id: customer.id,
-          activity_type: "ส่งอีเมล (Gmail)",
-          activity_date: today,
-          contact_person: customer.contact_person || null,
-          details: `เปิดส่งอีเมลผ่าน Gmail Web/App ถึง ${cleanToEmail}`,
-        });
-
         await supabase
           .from("customers")
           .update({
@@ -340,7 +290,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
           onEmailSent();
         }
       } catch (e) {
-        console.error("Error logging Gmail activity:", e);
+        console.error("Error updating customer pipeline stage:", e);
       }
     }
   };

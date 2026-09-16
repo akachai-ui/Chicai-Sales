@@ -325,7 +325,7 @@ export default function CustomerMapInner({
 
   // Realtime subscription for CRM changes
   useEffect(() => {
-    const unsubscribe = subscribeToRealtimeChanges(['customers', 'customer_activities'], async () => {
+    const unsubscribe = subscribeToRealtimeChanges(['customers'], async () => {
       try {
         const fresh = await fetchAllCustomers();
         if (fresh && fresh.length > 0) {

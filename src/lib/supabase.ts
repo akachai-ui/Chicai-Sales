@@ -40,49 +40,6 @@ export async function fetchAllCustomers(): Promise<Customer[]> {
     }
   }
 
-  // Fetch all activities to compute activity counts & latest activity for each customer
-  try {
-    const { data: activities, error: actError } = await supabase
-      .from('customer_activities')
-      .select('*')
-      .order('activity_date', { ascending: false });
-
-    if (!actError && activities && activities.length > 0) {
-      const activityMap = new Map<number, { count: number; latest: any }>();
-      for (const act of activities) {
-        if (!activityMap.has(act.customer_id)) {
-          activityMap.set(act.customer_id, { count: 1, latest: act });
-        } else {
-          const entry = activityMap.get(act.customer_id)!;
-          entry.count += 1;
-        }
-      }
-
-      all = all.map((c) => {
-        const entry = activityMap.get(c.id);
-        if (entry) {
-          return {
-            ...c,
-            activities_count: entry.count,
-            latest_activity: entry.latest,
-            // If stage is default 'ยังไม่ได้ติดต่อ' but has activity, display as 'ติดต่อแล้ว / ติดตามงาน'
-            pipeline_stage:
-              c.pipeline_stage === 'ยังไม่ได้ติดต่อ' || !c.pipeline_stage
-                ? 'ติดต่อแล้ว / ติดตามงาน'
-                : c.pipeline_stage,
-          };
-        }
-        return {
-          ...c,
-          activities_count: 0,
-          latest_activity: null,
-        };
-      });
-    }
-  } catch (err) {
-    console.warn('Could not fetch activities for customer summary:', err);
-  }
-
   return all;
 }
 
@@ -90,7 +47,7 @@ export async function fetchAllCustomers(): Promise<Customer[]> {
  * Realtime subscription for Supabase tables
  */
 export function subscribeToRealtimeChanges(
-  tables: ('customers' | 'customer_activities')[],
+  tables: ('customers')[],
   callback: (payload: { table: string; eventType: string; new: any; old: any }) => void
 ) {
   const channelName = `realtime-changes-${Math.random().toString(36).substring(2, 9)}`;

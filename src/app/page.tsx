@@ -40,7 +40,7 @@ export default function HomePage() {
     loadData();
 
     // Subscribe to real-time changes
-    const unsubscribe = subscribeToRealtimeChanges(['customers', 'customer_activities'], () => {
+    const unsubscribe = subscribeToRealtimeChanges(['customers'], () => {
       loadData();
     });
 
