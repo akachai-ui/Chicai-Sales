@@ -5,9 +5,11 @@ import Navbar from '@/components/layout/Navbar';
 import AddStopModal from '@/components/planner/AddStopModal';
 import DailyReportModal from '@/components/planner/DailyReportModal';
 import { DailyPlan, PlannedStop, VISIT_STATUS_CONFIG, VisitStatus, COMMON_OBJECTIVES } from '@/types/planner';
+import { Customer } from '@/types/customer';
 import {
   getDailyPlan,
   saveDailyPlan,
+  addCustomerToDailyPlan,
   formatThaiFullDate,
   formatThaiShortDate,
   getUpcomingPlansSummary,
@@ -146,6 +148,13 @@ export default function PlannerPage() {
     const updatedStops = [...plan.stops, newStop];
     const updated = { ...plan, stops: updatedStops };
     updateAndSavePlan(updated);
+  };
+
+  // Add Customer From Interactive Map Pin
+  const handleAddCustomerFromMap = (cust: Customer) => {
+    addCustomerToDailyPlan(cust, selectedDate);
+    const updated = getDailyPlan(selectedDate);
+    setPlan(updated);
   };
 
   // Remove Stop
@@ -718,14 +727,16 @@ export default function PlannerPage() {
           </div>
         </div>
 
-        {/* Interactive Route Map View (If enabled and has stops) */}
-        {showMap && plan.stops.length > 0 && (
+        {/* Interactive Route Map View (Always visible with toggle) */}
+        {showMap && (
           <div className="bg-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Compass className="w-4 h-4 text-blue-600" />
                 <h3 className="font-extrabold text-xs sm:text-sm text-slate-900">
-                  แผนที่แสดงเส้นทางและระยะทางวิ่งรถ ({plan.stops.length} จุดหมาย)
+                  {plan.stops.length > 0
+                    ? `แผนที่แสดงเส้นทางวิ่งรถ (${plan.stops.length} จุดหมาย)`
+                    : 'แผนที่จัดเส้นทาง - คลิกที่หมุดโรงงาน 🏢 บนแผนที่เพื่อเพิ่มลงแผนงานทันที'}
                 </h3>
               </div>
               {routeStats.totalKm > 0 && (
@@ -736,7 +747,11 @@ export default function PlannerPage() {
             </div>
 
             <div className="h-72 sm:h-96 w-full">
-              <PlannerRouteMap stops={plan.stops} />
+              <PlannerRouteMap
+                stops={plan.stops}
+                onAddCustomer={handleAddCustomerFromMap}
+                selectedDate={selectedDate}
+              />
             </div>
           </div>
         )}

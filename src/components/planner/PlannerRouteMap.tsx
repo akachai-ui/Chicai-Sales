@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { PlannedStop } from '@/types/planner';
+import { Customer } from '@/types/customer';
 import { Loader2 } from 'lucide-react';
 
 const PlannerRouteMapInner = dynamic(() => import('./PlannerRouteMapInner'), {
@@ -17,9 +18,20 @@ const PlannerRouteMapInner = dynamic(() => import('./PlannerRouteMapInner'), {
 export default function PlannerRouteMap({
   stops,
   onSelectStop,
+  onAddCustomer,
+  selectedDate,
 }: {
   stops: PlannedStop[];
   onSelectStop?: (stop: PlannedStop) => void;
+  onAddCustomer?: (customer: Customer) => void;
+  selectedDate?: string;
 }) {
-  return <PlannerRouteMapInner stops={stops} onSelectStop={onSelectStop} />;
+  return (
+    <PlannerRouteMapInner
+      stops={stops}
+      onSelectStop={onSelectStop}
+      onAddCustomer={onAddCustomer}
+      selectedDate={selectedDate}
+    />
+  );
 }
