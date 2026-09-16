@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AddStopModal from '@/components/planner/AddStopModal';
 import DailyReportModal from '@/components/planner/DailyReportModal';
@@ -61,9 +61,24 @@ import {
 
 export default function PlannerPage() {
   const [mounted, setMounted] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
+
+  const handleOpenDatePicker = () => {
+    if (dateInputRef.current) {
+      if ('showPicker' in HTMLInputElement.prototype) {
+        try {
+          dateInputRef.current.showPicker();
+        } catch {
+          dateInputRef.current.focus();
+        }
+      } else {
+        dateInputRef.current.focus();
+      }
+    }
+  };
 
   const [plan, setPlan] = useState<DailyPlan>({
     date: new Date().toISOString().split('T')[0],
@@ -383,23 +398,33 @@ export default function PlannerPage() {
                 </button>
               </div>
 
-              {/* Date Stepper & Native Date Picker */}
+              {/* Date Stepper & Ultra Clickable Date Picker */}
               <div className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => changeDateByDays(-1)}
-                  className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center shadow-2xs transition-all active:scale-95"
+                  className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center shadow-2xs transition-all active:scale-95 shrink-0"
                   title="วันก่อนหน้า"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                <div className="relative px-3 flex items-center space-x-1.5 min-w-[170px] justify-center text-xs font-extrabold text-slate-800 group cursor-pointer">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                {/* Big Clickable Date Selector Button */}
+                <button
+                  type="button"
+                  onClick={handleOpenDatePicker}
+                  className="relative px-3 py-1.5 mx-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl flex items-center space-x-2 min-w-[200px] justify-center text-xs font-black text-slate-800 hover:text-blue-700 shadow-2xs transition-all active:scale-98 group cursor-pointer"
+                  title="คลิกเพื่อเปิดปฏิทินเลือกวันที่ต้องการ"
+                >
+                  <Calendar className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform shrink-0" />
                   <span className="truncate">{formatThaiFullDate(selectedDate)}</span>
-                  
-                  {/* Invisible native date picker over label */}
+                  <span className="text-[10px] text-blue-600 font-bold bg-blue-100/80 px-1.5 py-0.5 rounded-md shrink-0">
+                    เลือกวัน ▾
+                  </span>
+
+                  {/* Native date picker input */}
                   <input
+                    ref={dateInputRef}
                     type="date"
                     value={selectedDate}
                     onChange={(e) => {
@@ -408,12 +433,12 @@ export default function PlannerPage() {
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     title="คลิกเพื่อเลือกวันที่ล่วงหน้าตามต้องการ"
                   />
-                </div>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => changeDateByDays(1)}
-                  className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center shadow-2xs transition-all active:scale-95"
+                  className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center shadow-2xs transition-all active:scale-95 shrink-0"
                   title="วันถัดไป"
                 >
                   <ChevronRight className="w-4 h-4" />
