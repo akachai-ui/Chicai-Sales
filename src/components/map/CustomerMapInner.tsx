@@ -274,6 +274,43 @@ export default function CustomerMapInner({
   const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
   const [showZones, setShowZones] = useState(true);
 
+  // Convert UnifiedFactory to Customer object for modal compatibility
+  const getCustomerFromFactory = useCallback((f: UnifiedFactory): Customer => {
+    if (f.crm_id) {
+      const found = rawCustomers.find((c) => c.id === f.crm_id);
+      if (found) return found;
+    }
+    return {
+      id: f.crm_id || 0,
+      seq: f.seq || null,
+      name: f.name,
+      phone: f.phone,
+      address: f.address,
+      district: f.district,
+      province: f.province || 'สมุทรปราการ',
+      website: f.website,
+      google_maps_url: f.google_maps_url,
+      latitude: f.latitude,
+      longitude: f.longitude,
+      business_type: f.business_type,
+      pipeline_stage: f.pipeline_stage,
+      contact_person: f.contact_person,
+      target_product: f.target_product,
+      notes: f.notes,
+      email: f.email,
+      tax_id: f.tax_id,
+      dbd_company_id: f.dbd_id,
+      registered_capital: f.registered_capital,
+      activities_count: f.activities_count,
+      latest_activity: f.latest_activity,
+      rating: null,
+      review_count: null,
+      operating_status: null,
+      place_id: null,
+      contact_result: null,
+    };
+  }, [rawCustomers]);
+
   // Load portfolio customer IDs on mount
   useEffect(() => {
     setPortfolioIds(getPortfolioCustomerIds());
@@ -556,43 +593,6 @@ function normalizeDistrictName(raw?: string | null): string {
     superclusterRef.current = index;
     renderClusteredMarkers();
   }, [filteredFactories]);
-
-  // Convert UnifiedFactory to Customer object for modal compatibility
-  const getCustomerFromFactory = (f: UnifiedFactory): Customer => {
-    if (f.crm_id) {
-      const found = rawCustomers.find((c) => c.id === f.crm_id);
-      if (found) return found;
-    }
-    return {
-      id: f.crm_id || 0,
-      seq: f.seq || null,
-      name: f.name,
-      phone: f.phone,
-      address: f.address,
-      district: f.district,
-      province: f.province || 'สมุทรปราการ',
-      website: f.website,
-      google_maps_url: f.google_maps_url,
-      latitude: f.latitude,
-      longitude: f.longitude,
-      business_type: f.business_type,
-      pipeline_stage: f.pipeline_stage,
-      contact_person: f.contact_person,
-      target_product: f.target_product,
-      notes: f.notes,
-      email: f.email,
-      tax_id: f.tax_id,
-      dbd_company_id: f.dbd_id,
-      registered_capital: f.registered_capital,
-      activities_count: f.activities_count,
-      latest_activity: f.latest_activity,
-      rating: null,
-      review_count: null,
-      operating_status: null,
-      place_id: null,
-      contact_result: null,
-    };
-  };
 
   // Seamless Save / Update Customer Handler
   const handleSaveAndSyncCustomer = async (cust: Customer) => {
