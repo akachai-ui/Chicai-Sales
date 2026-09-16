@@ -11,7 +11,8 @@ import {
 } from '@/lib/geo-distance';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, MapPin, Car, Locate, Building2, Plus, Check, Eye } from 'lucide-react';
+import { Navigation, MapPin, Car, Locate, Building2, Plus, Check, Eye, Star } from 'lucide-react';
+import { getPortfolioCustomerIds, isCustomerInPortfolio } from '@/lib/portfolio-storage';
 
 interface PlannerRouteMapInnerProps {
   stops: PlannedStop[];
@@ -33,8 +34,15 @@ export default function PlannerRouteMapInner({
 
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
-  const [showAllFactories, setShowAllFactories] = useState(true);
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+  const [showOnlyPortfolio, setShowOnlyPortfolio] = useState(true);
+  const [showCandidatePins, setShowCandidatePins] = useState(true);
   const [addedToast, setAddedToast] = useState<string | null>(null);
+
+  // Load portfolio IDs
+  useEffect(() => {
+    setPortfolioIds(getPortfolioCustomerIds());
+  }, []);
 
   // 1. Fetch available customers from Supabase
   useEffect(() => {
@@ -42,10 +50,10 @@ export default function PlannerRouteMapInner({
       try {
         const { data, error } = await supabase
           .from('customers')
-          .select('id, name, phone, address, district, province, google_maps_url, latitude, longitude, contact_person, target_product, pipeline_stage')
+          .select('id, name, phone, address, district, province, google_maps_url, latitude, longitude, contact_person, target_product, pipeline_stage, activities_count')
           .not('latitude', 'is', null)
           .not('longitude', 'is', null)
-          .limit(300);
+          .limit(500);
 
         if (!error && data) {
           setAllCustomers(data as Customer[]);
@@ -115,9 +123,7 @@ export default function PlannerRouteMapInner({
 
     candLg.clearLayers();
 
-    if (!showAllFactories || allCustomers.length === 0) return;
-
-    // Filter out factories that are already in the stops list
+    // Filter candidate customers based on portfolio focus & plan exclusion
     const plannedCustomerIds = new Set(
       stops.map((s) => s.customerId).filter(Boolean)
     );
@@ -125,51 +131,64 @@ export default function PlannerRouteMapInner({
       stops.map((s) => s.companyName.trim().toLowerCase())
     );
 
-    allCustomers.forEach((cust) => {
-      if (!cust.latitude || !cust.longitude) return;
-
+    const candidatePool = allCustomers.filter((cust) => {
+      if (!cust.latitude || !cust.longitude) return false;
       const isAlreadyInPlan =
         plannedCustomerIds.has(cust.id) ||
         plannedNames.has(cust.name.trim().toLowerCase());
+      if (isAlreadyInPlan) return false;
 
-      // Only draw candidate pins for factories NOT yet in the route plan
-      if (isAlreadyInPlan) return;
+      const inPort = isCustomerInPortfolio(cust, portfolioIds);
+      if (showOnlyPortfolio && !inPort) return false;
+
+      return true;
+    });
+
+    candidatePool.forEach((cust) => {
+      if (!cust.latitude || !cust.longitude) return;
+      const inPort = isCustomerInPortfolio(cust, portfolioIds);
 
       const candidateIcon = L.divIcon({
         className: 'candidate-factory-pin',
         html: `
-          <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
             <div style="
-              width: 22px;
-              height: 22px;
+              width: ${inPort ? '24px' : '20px'};
+              height: ${inPort ? '24px' : '20px'};
               border-radius: 50%;
-              background: #f8fafc;
-              border: 2px solid #3b82f6;
+              background: ${inPort ? '#fffbeb' : '#f8fafc'};
+              border: 2px solid ${inPort ? '#f59e0b' : '#3b82f6'};
               box-shadow: 0 2px 6px rgba(0,0,0,0.25);
               display: flex;
               align-items: center;
               justify-content: center;
-              color: #2563eb;
-              font-size: 11px;
+              font-size: ${inPort ? '12px' : '10px'};
             ">
-              🏢
+              ${inPort ? '⭐' : '🏢'}
             </div>
           </div>
         `,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
         popupAnchor: [0, -14],
       });
 
       const marker = L.marker([cust.latitude, cust.longitude], {
         icon: candidateIcon,
-        zIndexOffset: 100,
+        zIndexOffset: inPort ? 150 : 100,
       }).addTo(candLg);
 
       const popupHtml = `
-        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; padding: 2px; min-width: 210px; max-width: 260px;">
-          <div style="font-size: 10.5px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
-            📍 ${cust.district ? `${cust.district}, ` : ''}${cust.province || 'สมุทรปราการ'}
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; padding: 2px; min-width: 220px; max-width: 270px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+            <div style="font-size: 10.5px; font-weight: 700; color: #64748b;">
+              📍 ${cust.district ? `${cust.district}, ` : ''}${cust.province || 'สมุทรปราการ'}
+            </div>
+            ${inPort ? `
+              <span style="background: #fef3c7; color: #92400e; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 9999px; border: 1px solid #fcd34d;">
+                ⭐ ในพอร์ต
+              </span>
+            ` : ''}
           </div>
           <div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-bottom: 4px;">
             ${cust.name}
@@ -182,7 +201,7 @@ export default function PlannerRouteMapInner({
               style="
                 width: 100%;
                 padding: 7px 10px;
-                background: linear-gradient(135deg, #2563eb, #4f46e5);
+                background: ${inPort ? 'linear-gradient(135deg, #d97706, #b45309)' : 'linear-gradient(135deg, #2563eb, #4f46e5)'};
                 color: #ffffff;
                 border: none;
                 border-radius: 9px;
@@ -193,7 +212,7 @@ export default function PlannerRouteMapInner({
                 align-items: center;
                 justify-content: center;
                 gap: 5px;
-                box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.25);
               "
             >
               🚗 + เพิ่มเข้าแผนงาน (จุดที่ #${stops.length + 1})
@@ -219,7 +238,7 @@ export default function PlannerRouteMapInner({
         }
       });
     });
-  }, [allCustomers, showAllFactories, stops, onAddCustomer]);
+  }, [allCustomers, showCandidatePins, showOnlyPortfolio, portfolioIds, stops, onAddCustomer]);
 
   // 5. Render active route stops, markers, polylines and distance badges
   useEffect(() => {
@@ -403,6 +422,10 @@ export default function PlannerRouteMapInner({
     }
   }, [stops, userLocation, onSelectStop, allCustomers]);
 
+  const portfolioCandidateCount = useMemo(() => {
+    return allCustomers.filter((c) => isCustomerInPortfolio(c, portfolioIds)).length;
+  }, [allCustomers, portfolioIds]);
+
   return (
     <div className="relative w-full h-full min-h-[320px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
       <div ref={mapContainerRef} className="w-full h-full z-0" style={{ minHeight: '320px' }} />
@@ -415,25 +438,56 @@ export default function PlannerRouteMapInner({
       )}
 
       {/* Top Map Action Toolbar */}
-      <div className="absolute top-3 right-3 z-10 flex items-center space-x-2">
-        {/* Toggle show all factory pins button */}
-        <button
-          type="button"
-          onClick={() => setShowAllFactories(!showAllFactories)}
-          className={`py-1.5 px-3 rounded-xl shadow-md border text-xs font-bold flex items-center space-x-1.5 transition-all active:scale-95 ${
-            showAllFactories
-              ? 'bg-blue-600 text-white border-blue-700'
-              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-          }`}
-          title="เปิด/ปิด การแสดงหมุดโรงงานทั้งหมดบนแผนที่"
-        >
-          <Building2 className="w-3.5 h-3.5" />
-          <span>
-            {showAllFactories
-              ? `📍 แสดงหมุดโรงงานทั้งหมด (${allCustomers.length})`
-              : '📍 แสดงเฉพาะเส้นทาง'}
-          </span>
-        </button>
+      <div className="absolute top-3 right-3 z-10 flex items-center space-x-1.5 flex-wrap gap-y-1">
+        {/* Toggle Candidate Pins Mode */}
+        <div className="flex items-center bg-white/95 backdrop-blur-md p-1 rounded-2xl shadow-md border border-slate-200 space-x-1">
+          <button
+            type="button"
+            onClick={() => {
+              setShowCandidatePins(true);
+              setShowOnlyPortfolio(true);
+            }}
+            className={`py-1.5 px-2.5 rounded-xl text-xs font-black flex items-center space-x-1 transition-all ${
+              showCandidatePins && showOnlyPortfolio
+                ? 'bg-amber-500 text-white shadow-xs'
+                : 'text-amber-900 bg-amber-50 hover:bg-amber-100'
+            }`}
+            title="แสดงเฉพาะหมุดลูกค้าในพอร์ตโฟลิโอ"
+          >
+            <Star className={`w-3.5 h-3.5 ${showCandidatePins && showOnlyPortfolio ? 'fill-white text-white' : 'fill-amber-400 text-amber-500'}`} />
+            <span>ในพอร์ต ({portfolioCandidateCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowCandidatePins(true);
+              setShowOnlyPortfolio(false);
+            }}
+            className={`py-1.5 px-2.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all ${
+              showCandidatePins && !showOnlyPortfolio
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+            title="แสดงหมุดโรงงานทั้งหมด"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">ทั้งหมด ({allCustomers.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowCandidatePins(!showCandidatePins)}
+            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all ${
+              !showCandidatePins
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-400 hover:text-slate-700'
+            }`}
+            title="ซ่อนหมุดโรงงานนอกแผนงาน"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {/* GPS Locate Button */}
         <button
@@ -450,7 +504,7 @@ export default function PlannerRouteMapInner({
       {stops.length === 0 && (
         <div className="absolute bottom-3 left-3 right-3 z-10 p-2.5 bg-white/95 backdrop-blur-xs rounded-xl border border-blue-200 shadow-md text-center text-xs font-bold text-blue-900 flex items-center justify-center space-x-2">
           <span>💡</span>
-          <span>คลิกที่หมุดโรงงาน 🏢 บนแผนที่เพื่อกดเพิ่มเข้าแผนงานของวันนี้ได้ทันที</span>
+          <span>คลิกที่หมุดโรงงาน ⭐ ในพอร์ต หรือ 🏢 บนแผนที่เพื่อกดเพิ่มเข้าแผนงานของวันนี้ได้ทันที</span>
         </div>
       )}
     </div>

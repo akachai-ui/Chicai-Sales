@@ -52,8 +52,14 @@ import {
   Eye,
   X,
   Compass,
+  Star,
 } from 'lucide-react';
 import PlannerRouteMap from '@/components/planner/PlannerRouteMap';
+import {
+  getPortfolioCustomerIds,
+  isCustomerInPortfolio,
+  getCustomerFollowUpStatus,
+} from '@/lib/portfolio-storage';
 import {
   calculateRouteStats,
   formatDistanceThai,
@@ -109,6 +115,49 @@ export default function PlannerPage() {
 
   // Map View Toggle
   const [showMap, setShowMap] = useState<boolean>(true);
+
+  // Portfolio Integration States
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+  const [portfolioCustomers, setPortfolioCustomers] = useState<Customer[]>([]);
+  const [portfolioQuickAddToast, setPortfolioQuickAddToast] = useState<string | null>(null);
+
+  // Load portfolio IDs and candidate customers
+  useEffect(() => {
+    setPortfolioIds(getPortfolioCustomerIds());
+    const loadPortCustomers = async () => {
+      try {
+        const { data } = await supabase
+          .from('customers')
+          .select('id, name, phone, address, district, province, google_maps_url, latitude, longitude, contact_person, target_product, pipeline_stage, activities_count, latest_activity, updated_at')
+          .order('name', { ascending: true })
+          .limit(300);
+        if (data) {
+          setPortfolioCustomers(data as Customer[]);
+        }
+      } catch (e) {
+        console.error('Error loading portfolio customers in planner:', e);
+      }
+    };
+    loadPortCustomers();
+  }, []);
+
+  // Compute available portfolio candidates not yet in selected date's plan
+  const availablePortfolioCandidates = useMemo(() => {
+    const plannedIds = new Set(plan.stops.map((s) => s.customerId).filter(Boolean));
+    const plannedNames = new Set(plan.stops.map((s) => s.companyName.trim().toLowerCase()));
+
+    return portfolioCustomers.filter((c) => {
+      if (plannedIds.has(c.id) || plannedNames.has(c.name.trim().toLowerCase())) return false;
+      return isCustomerInPortfolio(c, portfolioIds);
+    });
+  }, [portfolioCustomers, portfolioIds, plan.stops]);
+
+  const handleQuickAddPortfolioToPlan = (c: Customer) => {
+    const res = addCustomerToDailyPlan(c, selectedDate);
+    setPlan(res.plan);
+    setPortfolioQuickAddToast(`✅ เพิ่ม ${c.name} ในแผนงาน (${formatThaiShortDate(selectedDate)}) เรียบร้อยแล้ว`);
+    setTimeout(() => setPortfolioQuickAddToast(null), 3500);
+  };
 
   // Load plan when date changes or when mounted
   useEffect(() => {
@@ -756,6 +805,70 @@ export default function PlannerPage() {
           </div>
         )}
 
+        {/* Quick Portfolio Focus Accounts Bar */}
+        {availablePortfolioCandidates.length > 0 && (
+          <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-500/10 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-amber-200 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                <h3 className="font-extrabold text-xs sm:text-sm text-amber-950">
+                  ลูกค้าในพอร์ตที่พร้อมวางแผนเข้าพบ ({availablePortfolioCandidates.length} ราย)
+                </h3>
+              </div>
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                คลิกเพื่อเพิ่มเข้าแผนงาน {formatThaiShortDate(selectedDate)}
+              </span>
+            </div>
+
+            {/* Quick Candidate Chips Horizontal Scroll */}
+            <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+              {availablePortfolioCandidates.map((cust) => {
+                const followUp = getCustomerFollowUpStatus(cust, 14);
+                return (
+                  <button
+                    key={cust.id}
+                    type="button"
+                    onClick={() => handleQuickAddPortfolioToPlan(cust)}
+                    className="shrink-0 bg-white hover:bg-amber-50 border border-amber-200/90 hover:border-amber-400 rounded-xl p-2.5 shadow-2xs text-left transition-all active:scale-95 group touch-press min-w-[180px] max-w-[220px]"
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-[10px] font-bold text-slate-500 truncate">
+                        📍 {cust.district || cust.province || 'สมุทรปราการ'}
+                      </span>
+                      <span className="w-5 h-5 rounded-full bg-amber-100 group-hover:bg-amber-500 group-hover:text-white text-amber-800 text-xs font-bold flex items-center justify-center transition-colors">
+                        +
+                      </span>
+                    </div>
+                    <div className="font-extrabold text-xs text-slate-900 truncate leading-snug">
+                      {cust.name}
+                    </div>
+                    <div className="text-[10px] font-semibold mt-1 flex items-center gap-1">
+                      {followUp.needsFollowUp ? (
+                        <span className="text-rose-600 font-bold flex items-center gap-0.5">
+                          <Clock className="w-2.5 h-2.5 text-rose-500" />
+                          <span>{followUp.label}</span>
+                        </span>
+                      ) : (
+                        <span className="text-emerald-700 font-medium">
+                          {followUp.label}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Add Toast */}
+        {portfolioQuickAddToast && (
+          <div className="fixed bottom-6 right-6 z-50 px-4 py-3 bg-slate-900 text-white font-bold text-xs rounded-2xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-3 flex items-center space-x-2">
+            <span>✨</span>
+            <span>{portfolioQuickAddToast}</span>
+          </div>
+        )}
+
         {/* Itinerary Stops List */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -802,6 +915,7 @@ export default function PlannerPage() {
                 const statusConf = VISIT_STATUS_CONFIG[stop.status] || VISIT_STATUS_CONFIG.PLANNED;
                 const isFirst = index === 0;
                 const isLast = index === plan.stops.length - 1;
+                const isPortfolioStop = stop.customerId ? portfolioIds.includes(stop.customerId) : false;
 
                 const directGpsUrl =
                   stop.googleMapsUrl ||
@@ -830,6 +944,12 @@ export default function PlannerPage() {
                         <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
                           {stop.companyName}
                         </h3>
+                        {isPortfolioStop && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5 shrink-0">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                            <span>ในพอร์ต</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Reorder and Delete Actions */}

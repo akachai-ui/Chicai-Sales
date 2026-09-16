@@ -270,7 +270,7 @@ export default function CustomerMapInner({
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
   const [contactFilter, setContactFilter] = useState<'ALL' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
-  const [onlyPortfolio, setOnlyPortfolio] = useState<boolean>(false);
+  const [onlyPortfolio, setOnlyPortfolio] = useState<boolean>(true);
   const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
   const [showZones, setShowZones] = useState(true);
 

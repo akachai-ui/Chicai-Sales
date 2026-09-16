@@ -17,7 +17,9 @@ import {
   User,
   Phone,
   Sparkles,
+  Star,
 } from 'lucide-react';
+import { getPortfolioCustomerIds, isCustomerInPortfolio } from '@/lib/portfolio-storage';
 
 interface AddStopModalProps {
   isOpen: boolean;
@@ -34,6 +36,8 @@ export default function AddStopModal({
 }: AddStopModalProps) {
   const [activeTab, setActiveTab] = useState<'crm' | 'custom'>('crm');
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+  const [portfolioOnly, setPortfolioOnly] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -49,6 +53,11 @@ export default function AddStopModal({
   const [objective, setObjective] = useState(COMMON_OBJECTIVES[0]);
   const [customObjective, setCustomObjective] = useState('');
 
+  // Load portfolio IDs on mount
+  useEffect(() => {
+    setPortfolioIds(getPortfolioCustomerIds());
+  }, [isOpen]);
+
   // Load CRM Customers
   useEffect(() => {
     if (!isOpen) return;
@@ -58,9 +67,9 @@ export default function AddStopModal({
       try {
         const { data, error } = await supabase
           .from('customers')
-          .select('id, name, phone, address, district, province, google_maps_url, latitude, longitude, contact_person, target_product, pipeline_stage')
+          .select('id, name, phone, address, district, province, google_maps_url, latitude, longitude, contact_person, target_product, pipeline_stage, activities_count')
           .order('name', { ascending: true })
-          .limit(300);
+          .limit(500);
 
         if (!error && data) {
           setCustomers(data as Customer[]);
@@ -89,17 +98,26 @@ export default function AddStopModal({
     }
   };
 
+  const portfolioCustomerCount = useMemo(() => {
+    return customers.filter((c) => isCustomerInPortfolio(c, portfolioIds)).length;
+  }, [customers, portfolioIds]);
+
   const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return customers.slice(0, 50);
+    let list = customers;
+    if (portfolioOnly) {
+      list = list.filter((c) => isCustomerInPortfolio(c, portfolioIds));
+    }
+
+    if (!searchQuery.trim()) return list.slice(0, 60);
     const q = searchQuery.toLowerCase();
-    return customers.filter(
+    return list.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         (c.province && c.province.toLowerCase().includes(q)) ||
         (c.district && c.district.toLowerCase().includes(q)) ||
         (c.contact_person && c.contact_person.toLowerCase().includes(q))
     );
-  }, [customers, searchQuery]);
+  }, [customers, portfolioOnly, portfolioIds, searchQuery]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,6 +216,34 @@ export default function AddStopModal({
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-slate-800 text-xs sm:text-sm">
           {activeTab === 'crm' && (
             <div className="space-y-3">
+              {/* Portfolio Segment Filter Pills */}
+              <div className="flex items-center space-x-1.5 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPortfolioOnly(true)}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1 touch-press ${
+                    portfolioOnly
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'bg-amber-50 text-amber-900 border border-amber-200/70 hover:bg-amber-100'
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${portfolioOnly ? 'fill-white text-white' : 'fill-amber-400 text-amber-500'}`} />
+                  <span>ลูกค้าในพอร์ต ({portfolioCustomerCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPortfolioOnly(false)}
+                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1 touch-press ${
+                    !portfolioOnly
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>โรงงานทั้งหมด ({customers.length})</span>
+                </button>
+              </div>
+
               {/* Search input */}
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -219,12 +265,13 @@ export default function AddStopModal({
                   </div>
                 ) : filteredCustomers.length === 0 ? (
                   <div className="p-6 text-center text-slate-400 text-xs">
-                    ไม่พบรายชื่อที่ตรงกับคำค้นหา
+                    ไม่พบรายชื่อที่ตรงกับเงื่อนไขที่เลือก
                   </div>
                 ) : (
                   filteredCustomers.map((c) => {
                     const isSelected = selectedCustomer?.id === c.id;
                     const isAlreadyInPlan = existingCustomerIds.includes(c.id);
+                    const inPort = isCustomerInPortfolio(c, portfolioIds);
 
                     return (
                       <button
@@ -238,12 +285,18 @@ export default function AddStopModal({
                         }`}
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-1.5">
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
                             <span className="font-extrabold text-xs sm:text-sm truncate">
                               {c.name}
                             </span>
+                            {inPort && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-extrabold flex items-center gap-0.5 shrink-0">
+                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                                <span>ในพอร์ต</span>
+                              </span>
+                            )}
                             {isAlreadyInPlan && (
-                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold shrink-0">
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-bold shrink-0">
                                 อยู่ในแผนแล้ว
                               </span>
                             )}
