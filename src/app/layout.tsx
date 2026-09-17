@@ -6,10 +6,6 @@ export const metadata: Metadata = {
   title: "Chicai-Sales - Sales Management & Factory Map",
   description: "Industrial factory map and sales management platform for sales teams",
   applicationName: "Chicai Sales",
-  icons: {
-    icon: "/images/logo.png",
-    apple: "/images/logo.png",
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
