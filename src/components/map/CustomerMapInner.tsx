@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Customer, DBDCompany, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
+import { Customer, DBDCompany, MyCustomer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
 import { fetchAllCustomers, subscribeToRealtimeChanges, supabase } from '@/lib/supabase';
 import CustomerDetailModal from './CustomerDetailModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
@@ -35,18 +35,17 @@ import {
 import Link from 'next/link';
 import {
   calculateDistanceKm,
-  formatDistanceThai,
+  formatDistanceEng,
   calculateRouteStats,
-  formatDrivingTimeThai,
+  formatDrivingTimeEng,
   estimateDrivingTimeMinutes,
 } from '@/lib/geo-distance';
 import {
-  getMyPortfolioIds,
-  addToPortfolio,
-  removeFromPortfolio,
+  getLocalMyCustomers,
+  syncMyCustomersFromSupabase,
   togglePortfolio,
   subscribeToPortfolioChanges,
-  isCustomerInPortfolio,
+  isFactoryInPortfolio,
 } from '@/lib/portfolio';
 import { useSearchParams } from 'next/navigation';
 
@@ -85,31 +84,13 @@ interface CustomerMapInnerProps {
 }
 
 // Function to generate clean minimal SVG Pin for any factory
-function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) {
-  const stage = factory.pipeline_stage || 'ยังไม่ได้ติดต่อ';
-  const hasContact =
-    (factory.activities_count !== undefined && factory.activities_count > 0) ||
-    (stage && stage !== 'ยังไม่ได้ติดต่อ');
-
-  let pinColor = '#1b9b8e'; // default uncontacted: modern Persian Green / Teal
-  let isContacted = false;
-
-  if (hasContact) {
-    isContacted = true;
-    if (stage.includes('ติดต่อแล้ว') || stage.includes('ติดตามงาน')) pinColor = '#f59e0b'; // vibrant amber
-    else if (stage.includes('นัดหมาย') || stage.includes('Demo')) pinColor = '#0284c7'; // cyan/blue
-    else if (stage.includes('เสนอราคา')) pinColor = '#7c3aed'; // purple
-    else if (stage.includes('สำเร็จ') || stage.includes('ปิดการขาย')) pinColor = '#059669'; // emerald
-    else if (stage.includes('ไม่สนใจ') || stage.includes('ไม่ได้')) pinColor = '#e11d48'; // rose
-    else pinColor = '#10b981'; // default contacted
-  }
-
+function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false, isInPortfolio: boolean = false) {
   if (isSelected) {
     return `
       <div style="position: relative; width: 48px; height: 58px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; z-index: 99999;">
         <!-- Radar Pulse Waves -->
-        <div class="radar-ring" style="border-color: ${isContacted ? '#10b981' : '#1b9b8e'};"></div>
-        <div class="radar-ring-2" style="border-color: ${isContacted ? '#10b981' : '#1b9b8e'};"></div>
+        <div class="radar-ring" style="border-color: ${isInPortfolio ? '#f59e0b' : '#1b9b8e'};"></div>
+        <div class="radar-ring-2" style="border-color: ${isInPortfolio ? '#f59e0b' : '#1b9b8e'};"></div>
 
         <!-- Floating Name Tag Badge -->
         <div style="
@@ -120,53 +101,55 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
           background: #0f172a;
           color: #ffffff;
           padding: 5px 12px;
-          border-radius: 10px;
+          border-radius: 12px;
           font-size: 11px;
           font-weight: 700;
           white-space: nowrap;
           box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-          border: 1.5px solid ${isContacted ? '#10b981' : '#1b9b8e'};
+          border: 1.5px solid ${isInPortfolio ? '#f59e0b' : '#1b9b8e'};
           display: flex;
           align-items: center;
           gap: 6px;
           pointer-events: none;
         ">
-          <span>${isContacted ? '✅' : '🏢'}</span>
+          <span>${isInPortfolio ? '⭐' : '🏢'}</span>
           <span>${factory.name}</span>
-          ${factory.activities_count ? `<span style="background: #10b981; color: white; border-radius: 9999px; padding: 1px 6px; font-size: 9px; font-weight: 800;">${factory.activities_count} ครั้ง</span>` : ''}
+          ${isInPortfolio ? `<span style="background: #f59e0b; color: white; border-radius: 9999px; padding: 1px 6px; font-size: 9px; font-weight: 800;">In Portfolio</span>` : `<span style="background: #148277; color: white; border-radius: 9999px; padding: 1px 6px; font-size: 9px; font-weight: 800;">Available</span>`}
         </div>
 
-        <svg width="44" height="54" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));">
-          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${isContacted ? '#10b981' : '#1b9b8e'}"/>
-          <path d="M16 2C8.268 2 2 8.268 2 16c0 10.5 14 21 14 21s14-10.5 14-21c0-7.732-6.268-14-14-14z" fill="${pinColor}"/>
+        <svg width="44" height="54" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));">
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${isInPortfolio ? '#d97706' : '#148277'}"/>
+          <path d="M16 2C8.268 2 2 8.268 2 16c0 10.5 14 21 14 21s14-10.5 14-21c0-7.732-6.268-14-14-14z" fill="${isInPortfolio ? '#f59e0b' : '#1b9b8e'}"/>
           <circle cx="16" cy="15" r="7" fill="#ffffff"/>
-          <circle cx="16" cy="15" r="4" fill="${isContacted ? '#10b981' : '#1b9b8e'}"/>
+          ${isInPortfolio 
+            ? `<polygon points="16,10 17.5,13.5 21.5,13.5 18.2,16 19.5,20 16,17.5 12.5,20 13.8,16 10.5,13.5 14.5,13.5" fill="#f59e0b"/>`
+            : `<circle cx="16" cy="15" r="4" fill="#1b9b8e"/>`
+          }
         </svg>
       </div>
     `;
   }
 
-  if (isContacted) {
-    const countBadge = factory.activities_count && factory.activities_count > 1 ? factory.activities_count : '✓';
+  if (isInPortfolio) {
+    // In Portfolio Pin: Golden Amber Pin with Star ⭐ badge
     return `
       <div style="position: relative; width: 30px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-        <svg width="28" height="34" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.15s ease;">
-          <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="${pinColor}"/>
+        <svg width="28" height="34" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 3px 6px rgba(245,158,11,0.5)); transition: transform 0.15s ease;">
+          <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="#f59e0b"/>
           <path d="M13 1.5C6.65 1.5 1.5 6.65 1.5 13c0 8.5 11.5 17 11.5 17s11.5-8.5 11.5-17c0-6.35-5.15-11.5-11.5-11.5z" stroke="#ffffff" stroke-width="1.2"/>
           <circle cx="13" cy="12" r="5" fill="#ffffff"/>
-          <circle cx="13" cy="12" r="3" fill="${pinColor}"/>
+          <circle cx="13" cy="12" r="3" fill="#f59e0b"/>
         </svg>
         <div style="
           position: absolute;
-          top: -3px;
-          right: -3px;
-          min-width: 15px;
-          height: 15px;
-          padding: 0 2px;
+          top: -4px;
+          right: -4px;
+          width: 16px;
+          height: 16px;
           border-radius: 9999px;
-          background: #10b981;
+          background: #f59e0b;
           color: #ffffff;
-          font-size: 9px;
+          font-size: 10px;
           font-weight: 900;
           display: flex;
           align-items: center;
@@ -174,16 +157,16 @@ function createFactoryPin(factory: UnifiedFactory, isSelected: boolean = false) 
           border: 1.5px solid #ffffff;
           box-shadow: 0 1px 4px rgba(0,0,0,0.3);
         ">
-          ${countBadge}
+          ★
         </div>
       </div>
     `;
   }
 
-  // Uncontacted Factory Pin
+  // Not in portfolio Pin: Clean Teal Factory Pin
   return `
     <div style="position: relative; width: 26px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.92;">
-      <svg width="24" height="30" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.15s ease;">
+      <svg width="24" height="30" viewBox="0 0 26 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25)); transition: transform 0.15s ease;">
         <path d="M13 0C5.82 0 0 5.82 0 13c0 9.75 13 19 13 19s13-9.25 13-19c0-7.18-5.82-13-13-13z" fill="#1b9b8e"/>
         <path d="M13 1.5C6.65 1.5 1.5 6.65 1.5 13c0 8.5 11.5 17 11.5 17s11.5-8.5 11.5-17c0-6.35-5.15-11.5-11.5-11.5z" stroke="#ffffff" stroke-width="1"/>
         <circle cx="13" cy="12" r="4.5" fill="#ffffff"/>
@@ -253,7 +236,7 @@ function createZoneLabelIcon(name: string, count: number, color: string) {
       cursor: pointer;
     ">
       <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display: inline-block;"></span>
-      <span>โซน${name}</span>
+      <span>${name} Zone</span>
       <span style="background: #f1f5f9; color: ${color}; font-size: 10px; padding: 1px 5px; border-radius: 10px; font-weight: 800;">${count}</span>
     </div>
   `;
@@ -268,27 +251,39 @@ export default function CustomerMapInner({
   const [rawDbdCompanies, setRawDbdCompanies] = useState<DBDCompany[]>(initialDbdCompanies);
 
   // Portfolio state
-  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+  const [myCustomers, setMyCustomers] = useState<MyCustomer[]>([]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
-  const [selectedStage, setSelectedStage] = useState<string>('ALL');
-  const [contactFilter, setContactFilter] = useState<'ALL' | 'PORTFOLIO' | 'CONTACTED' | 'UNCONTACTED' | 'WITH_EMAIL'>('ALL');
+  const [contactFilter, setContactFilter] = useState<'ALL' | 'PORTFOLIO' | 'NOT_PORTFOLIO' | 'WITH_EMAIL'>('ALL');
   const [showZones, setShowZones] = useState(true);
 
-  // Sync portfolio from localStorage / events
+  // Sync portfolio from localStorage / Supabase / events
   useEffect(() => {
-    setPortfolioIds(getMyPortfolioIds());
-    const unsub = subscribeToPortfolioChanges((ids) => {
-      setPortfolioIds(ids);
+    setMyCustomers(getLocalMyCustomers());
+    syncMyCustomersFromSupabase().then((list) => {
+      if (list) setMyCustomers(list);
+    });
+
+    const unsub = subscribeToPortfolioChanges((list) => {
+      setMyCustomers(list);
+    });
+
+    const unsubRealtime = subscribeToRealtimeChanges(['my_customers'], () => {
+      syncMyCustomersFromSupabase().then((list) => {
+        if (list) setMyCustomers(list);
+      });
     });
 
     if (searchParams?.get('portfolio') === 'true') {
       setContactFilter('PORTFOLIO');
     }
 
-    return () => unsub();
+    return () => {
+      unsub();
+      unsubRealtime();
+    };
   }, [searchParams]);
 
   // Convert UnifiedFactory to Customer object for modal compatibility
@@ -460,25 +455,18 @@ function normalizeDistrictName(raw?: string | null): string {
   return s;
 }
 
-  // Summary counts of contacted vs uncontacted, with email, and in portfolio
+  // Summary counts of factories in portfolio vs master database
   const statsSummary = useMemo(() => {
-    let contacted = 0;
-    let uncontacted = 0;
     let withEmail = 0;
     let inPortfolio = 0;
 
     unifiedFactories.forEach((f) => {
       if (f.email && f.email.trim()) withEmail++;
-      if (isCustomerInPortfolio(f.crm_id, portfolioIds)) inPortfolio++;
-
-      const hasContact =
-        (f.activities_count !== undefined && f.activities_count > 0) ||
-        (f.pipeline_stage && f.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
-      if (hasContact) contacted++;
-      else uncontacted++;
+      if (isFactoryInPortfolio(f, myCustomers)) inPortfolio++;
     });
-    return { contacted, uncontacted, withEmail, inPortfolio, total: unifiedFactories.length };
-  }, [unifiedFactories, portfolioIds]);
+    const notInPortfolio = unifiedFactories.length - inPortfolio;
+    return { withEmail, inPortfolio, notInPortfolio, total: unifiedFactories.length };
+  }, [unifiedFactories, myCustomers]);
 
   // Generate District Zones automatically from all unified points
   const districtZones = useMemo(() => {
@@ -500,35 +488,29 @@ function normalizeDistrictName(raw?: string | null): string {
       if (!f.latitude || !f.longitude) return false;
 
       if (selectedDistrict !== 'ALL' && f.district !== selectedDistrict) return false;
-      if (selectedStage !== 'ALL' && f.pipeline_stage !== selectedStage) return false;
 
-      // Portfolio Filter
-      if (contactFilter === 'PORTFOLIO') {
-        const inPort = isCustomerInPortfolio(f.crm_id, portfolioIds);
-        if (!inPort) return false;
-      }
-
-      // Contact Status Filter
-      const hasContact =
-        (f.activities_count !== undefined && f.activities_count > 0) ||
-        (f.pipeline_stage && f.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
-
-      if (contactFilter === 'CONTACTED' && !hasContact) return false;
-      if (contactFilter === 'UNCONTACTED' && hasContact) return false;
+      const inPort = isFactoryInPortfolio(f, myCustomers);
+      if (contactFilter === 'PORTFOLIO' && !inPort) return false;
+      if (contactFilter === 'NOT_PORTFOLIO' && inPort) return false;
       if (contactFilter === 'WITH_EMAIL' && (!f.email || !f.email.trim())) return false;
 
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
         const matchName = f.name.toLowerCase().includes(q);
         const matchPhone = f.phone && f.phone.toLowerCase().includes(q);
         const matchEmail = f.email && f.email.toLowerCase().includes(q);
         const matchType = f.business_type && f.business_type.toLowerCase().includes(q);
         const matchAddr = f.address && f.address.toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchEmail && !matchType && !matchAddr) return false;
+        const matchDistrict = f.district && f.district.toLowerCase().includes(q);
+        const matchProduct = f.target_product && f.target_product.toLowerCase().includes(q);
+        const matchTsic = f.tsic_code && f.tsic_code.toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchEmail && !matchType && !matchAddr && !matchDistrict && !matchProduct && !matchTsic) {
+          return false;
+        }
       }
       return true;
     });
-  }, [unifiedFactories, selectedDistrict, selectedStage, contactFilter, searchQuery]);
+  }, [unifiedFactories, selectedDistrict, contactFilter, searchQuery, myCustomers]);
 
   // Fly to Factory
   const flyToFactory = useCallback((factory: UnifiedFactory) => {
@@ -664,7 +646,7 @@ function normalizeDistrictName(raw?: string | null): string {
               let leavesHtml = `
                 <div style="font-family: inherit; min-width: 250px; max-width: 300px; max-height: 270px; overflow-y: auto; padding: 2px;">
                   <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-                    🏭 มี ${leaves.length} โรงงานในบริเวณนี้
+                    🏭 ${leaves.length} factories in this area
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 6px;">
               `;
@@ -678,7 +660,7 @@ function normalizeDistrictName(raw?: string | null): string {
                 leavesHtml += `
                   <div id="leaf-select-${f.id}" style="padding: 6px 8px; border-radius: 8px; background: ${hasContact ? '#f0fdf4' : '#f8fafc'}; border: 1px solid ${hasContact ? '#bbf7d0' : '#cbd5e1'}; cursor: pointer; transition: background 0.15s ease;">
                     <div style="font-size: 12px; font-weight: 700; color: #1e293b;">🏢 ${f.name}</div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">📞 ${f.phone || '-'} • <span style="color: ${hasContact ? '#059669' : '#2563eb'}; font-weight: 600;">${f.pipeline_stage || 'ยังไม่ได้ติดต่อ'}</span></div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">📞 ${f.phone || '-'} • <span style="color: ${hasContact ? '#059669' : '#2563eb'}; font-weight: 600;">${f.pipeline_stage || 'Not Contacted'}</span></div>
                   </div>
                 `;
               });
@@ -710,42 +692,47 @@ function normalizeDistrictName(raw?: string | null): string {
 
           if (selectedFactory && factory.id === selectedFactory.id) return;
 
+          const inPort = isFactoryInPortfolio(factory, myCustomers);
+
           const customIcon = L.divIcon({
             className: 'custom-marker-icon',
-            html: createFactoryPin(factory, false),
-            iconSize: [26, 32],
-            iconAnchor: [13, 32],
+            html: createFactoryPin(factory, false, inPort),
+            iconSize: inPort ? [30, 36] : [26, 32],
+            iconAnchor: inPort ? [15, 36] : [13, 32],
             popupAnchor: [0, -30],
           });
 
           const marker = L.marker([lat, lng], { icon: customIcon });
 
-          const isContacted =
-            (factory.activities_count !== undefined && factory.activities_count > 0) ||
-            (factory.pipeline_stage && factory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
-
           const popupContent = `
-            <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
-              <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
-                📍 ${factory.district || 'สมุทรปราการ'}
+            <div style="font-family: inherit; min-width: 240px; max-width: 300px; padding: 2px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+                <span style="font-size: 11px; font-weight: 700; color: #64748b;">
+                  📍 ${factory.district || 'Samut Prakan'}
+                </span>
+                <span style="font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 9999px; ${inPort ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1;'}">
+                  ${inPort ? '⭐ In Portfolio' : '⚪ Available'}
+                </span>
               </div>
-              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
+              <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
                 ${factory.name}
               </div>
-              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; background-color: ${isContacted ? '#ecfdf5' : '#eff6ff'}; color: ${isContacted ? '#065f46' : '#1e40af'}; border: 1px solid ${isContacted ? '#a7f3d0' : '#bfdbfe'};">
-                  ${isContacted ? '✓ ' : ''}${factory.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
-                </span>
-                ${factory.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${factory.activities_count} กิจกรรม</span>` : ''}
-              </div>
               ${factory.phone ? `
-                <div style="font-size: 12px; color: #475569; margin-bottom: 6px;">
+                <div style="font-size: 11px; color: #475569; margin-bottom: 3px;">
                   📞 <b>${factory.phone}</b>
                 </div>
               ` : ''}
-              <div style="margin-top: 6px;">
-                <button id="btn-popup-details-${factory.id}" style="width: 100%; padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(37,99,235,0.3);">
-                  ดูรายละเอียด & บันทึกงานขาย ➔
+              ${factory.email ? `
+                <div style="font-size: 11px; color: #4338ca; margin-bottom: 4px; truncate;">
+                  ✉️ ${factory.email}
+                </div>
+              ` : ''}
+              <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+                <button id="btn-popup-toggle-port-${factory.id}" style="width: 100%; padding: 6px 10px; background: ${inPort ? '#fef3c7' : '#1b9b8e'}; color: ${inPort ? '#92400e' : '#ffffff'}; border: ${inPort ? '1px solid #fcd34d' : 'none'}; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                  ${inPort ? '✓ In Portfolio' : '⭐ + Add to Portfolio'}
+                </button>
+                <button id="btn-popup-details-${factory.id}" style="width: 100%; padding: 6px 10px; background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                  View Details & Location ➔
                 </button>
               </div>
             </div>
@@ -759,6 +746,12 @@ function normalizeDistrictName(raw?: string | null): string {
 
           marker.on('popupopen', () => {
             setSelectedFactory(factory);
+            const btnToggle = document.getElementById(`btn-popup-toggle-port-${factory.id}`);
+            if (btnToggle) {
+              btnToggle.onclick = () => {
+                togglePortfolio(factory);
+              };
+            }
             const btnDetails = document.getElementById(`btn-popup-details-${factory.id}`);
             if (btnDetails) {
               btnDetails.onclick = () => {
@@ -772,7 +765,7 @@ function normalizeDistrictName(raw?: string | null): string {
         }
       });
     });
-  }, [selectedFactory, flyToFactory]);
+  }, [selectedFactory, flyToFactory, myCustomers, getCustomerFromFactory]);
 
   // Dedicated Highlight Layer for Selected Factory
   useEffect(() => {
@@ -785,45 +778,50 @@ function normalizeDistrictName(raw?: string | null): string {
 
       if (!selectedFactory || !selectedFactory.latitude || !selectedFactory.longitude) return;
 
+      const inPort = isFactoryInPortfolio(selectedFactory, myCustomers);
+
       const customIcon = L.divIcon({
         className: 'custom-marker-icon selected-pin-container',
-        html: createFactoryPin(selectedFactory, true),
+        html: createFactoryPin(selectedFactory, true, inPort),
         iconSize: [44, 54],
         iconAnchor: [22, 54],
         popupAnchor: [0, -52],
       });
 
       const marker = L.marker([selectedFactory.latitude, selectedFactory.longitude], {
-        icon: customIcon,
         zIndexOffset: 100000,
+        icon: customIcon,
       });
 
-      const isContacted =
-        (selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
-        (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
-
       const popupContent = `
-        <div style="font-family: inherit; min-width: 235px; max-width: 290px; padding: 2px;">
-          <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px;">
-            📍 ${selectedFactory.district || 'สมุทรปราการ'}
+        <div style="font-family: inherit; min-width: 240px; max-width: 300px; padding: 2px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+            <span style="font-size: 11px; font-weight: 700; color: #64748b;">
+              📍 ${selectedFactory.district || 'Samut Prakan'}
+            </span>
+            <span style="font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 9999px; ${inPort ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;' : 'background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1;'}">
+              ${inPort ? '⭐ In Portfolio' : '⚪ Available'}
+            </span>
           </div>
           <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">
             ${selectedFactory.name}
           </div>
-          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; background-color: ${isContacted ? '#ecfdf5' : '#eff6ff'}; color: ${isContacted ? '#065f46' : '#1e40af'}; border: 1px solid ${isContacted ? '#a7f3d0' : '#bfdbfe'};">
-              ${isContacted ? '✓ ' : ''}${selectedFactory.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
-            </span>
-            ${selectedFactory.activities_count ? `<span style="font-size: 10px; font-weight: bold; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 8px;">${selectedFactory.activities_count} กิจกรรม</span>` : ''}
-          </div>
           ${selectedFactory.phone ? `
-            <div style="font-size: 12px; color: #475569; margin-bottom: 6px;">
+            <div style="font-size: 11px; color: #475569; margin-bottom: 3px;">
               📞 <b>${selectedFactory.phone}</b>
             </div>
           ` : ''}
-          <div style="margin-top: 6px;">
-            <button id="btn-details-selected-${selectedFactory.id}" style="width: 100%; padding: 8px 12px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 2px 5px rgba(37,99,235,0.3);">
-              ดูรายละเอียด & บันทึกงานขาย ➔
+          ${selectedFactory.email ? `
+            <div style="font-size: 11px; color: #4338ca; margin-bottom: 4px;">
+              ✉️ ${selectedFactory.email}
+            </div>
+          ` : ''}
+          <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+            <button id="btn-selected-toggle-port-${selectedFactory.id}" style="width: 100%; padding: 7px 10px; background: ${inPort ? '#fef3c7' : '#1b9b8e'}; color: ${inPort ? '#92400e' : '#ffffff'}; border: ${inPort ? '1px solid #fcd34d' : 'none'}; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              ${inPort ? '✓ In Portfolio (Click to remove)' : '⭐ + Add to Portfolio'}
+            </button>
+            <button id="btn-details-selected-${selectedFactory.id}" style="width: 100%; padding: 7px 10px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              View Company Details ➔
             </button>
           </div>
         </div>
@@ -831,6 +829,12 @@ function normalizeDistrictName(raw?: string | null): string {
 
       marker.bindPopup(popupContent);
       marker.on('popupopen', () => {
+        const btnToggle = document.getElementById(`btn-selected-toggle-port-${selectedFactory.id}`);
+        if (btnToggle) {
+          btnToggle.onclick = () => {
+            togglePortfolio(selectedFactory);
+          };
+        }
         const btn = document.getElementById(`btn-details-selected-${selectedFactory.id}`);
         if (btn) {
           btn.onclick = () => {
@@ -844,7 +848,7 @@ function normalizeDistrictName(raw?: string | null): string {
         marker.openPopup();
       }
     });
-  }, [selectedFactory]);
+  }, [selectedFactory, myCustomers, getCustomerFromFactory]);
 
   // Draw or clear District Zones
   const renderDistrictZones = useCallback(() => {
@@ -1023,7 +1027,7 @@ function normalizeDistrictName(raw?: string | null): string {
 
               marker.bindPopup(`
                 <div style="font-family: inherit; font-size: 13px; font-weight: 700; color: #1e293b; padding: 2px;">
-                  📍 ตำแหน่งปัจจุบันของคุณ
+                  📍 Your Current Location
                 </div>
               `).openPopup();
 
@@ -1034,7 +1038,7 @@ function normalizeDistrictName(raw?: string | null): string {
           }
         },
         (err) => {
-          alert('ไม่สามารถเข้าถึงตำแหน่งปัจจุบันได้: ' + err.message);
+          alert('Unable to access current location: ' + err.message);
         }
       );
     }
@@ -1055,7 +1059,7 @@ function normalizeDistrictName(raw?: string | null): string {
               <Search className="w-4 h-4 text-slate-400 ml-2 shrink-0" />
               <input
                 type="text"
-                placeholder="ค้นหาชื่อโรงงาน, เบอร์โทร, อำเภอ, สินค้า..."
+                placeholder="Search factory name, phone, district, product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full text-xs text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
@@ -1067,7 +1071,7 @@ function normalizeDistrictName(raw?: string | null): string {
               )}
             </div>
 
-            {/* Quick Status Filter Pills */}
+            {/* Quick Filter Pills (All vs In Portfolio vs Available vs Email) */}
             <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-md shadow-md rounded-2xl border border-slate-200/80 p-1 shrink-0 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setContactFilter('ALL')}
@@ -1077,7 +1081,7 @@ function normalizeDistrictName(raw?: string | null): string {
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                ทั้งหมด ({statsSummary.total})
+                All ({statsSummary.total})
               </button>
               <button
                 onClick={() => setContactFilter(contactFilter === 'PORTFOLIO' ? 'ALL' : 'PORTFOLIO')}
@@ -1086,38 +1090,26 @@ function normalizeDistrictName(raw?: string | null): string {
                     ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-300'
                     : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
                 }`}
-                title="แสดงเฉพาะโรงงานที่อยู่ในพอร์ตของฉัน"
+                title="Show factories in My Portfolio"
               >
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                <span>ในพอร์ต</span>
+                <span>In Portfolio</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${contactFilter === 'PORTFOLIO' ? 'bg-white/30 text-white' : 'bg-amber-200/60 text-amber-900'}`}>
                   {statsSummary.inPortfolio}
                 </span>
               </button>
               <button
-                onClick={() => setContactFilter('CONTACTED')}
+                onClick={() => setContactFilter(contactFilter === 'NOT_PORTFOLIO' ? 'ALL' : 'NOT_PORTFOLIO')}
                 className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
-                  contactFilter === 'CONTACTED'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
-                }`}
-              >
-                <span>✓ ติดต่อแล้ว</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/30 font-extrabold">
-                  {statsSummary.contacted}
-                </span>
-              </button>
-              <button
-                onClick={() => setContactFilter('UNCONTACTED')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all touch-press ${
-                  contactFilter === 'UNCONTACTED'
-                    ? 'bg-[#1b9b8e] text-white shadow-xs'
+                  contactFilter === 'NOT_PORTFOLIO'
+                    ? 'bg-[#1b9b8e] text-white shadow-xs ring-2 ring-teal-300'
                     : 'text-[#148277] bg-teal-50 hover:bg-teal-100 border border-teal-200/60'
                 }`}
+                title="Show available unassigned factories"
               >
-                <span>ยังไม่ได้ติดต่อ</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/30 font-semibold">
-                  {statsSummary.uncontacted}
+                <span>⚪ Available</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${contactFilter === 'NOT_PORTFOLIO' ? 'bg-white/30 text-white' : 'bg-teal-200/60 text-[#116960]'}`}>
+                  {statsSummary.notInPortfolio}
                 </span>
               </button>
               <button
@@ -1127,9 +1119,9 @@ function normalizeDistrictName(raw?: string | null): string {
                     ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-400'
                     : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60'
                 }`}
-                title="แสดงเฉพาะโรงงานที่มีอีเมลติดต่อ"
+                title="Show factories with email address"
               >
-                <span>✉️ มีอีเมล</span>
+                <span>✉️ With Email</span>
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${contactFilter === 'WITH_EMAIL' ? 'bg-white/30 text-white' : 'bg-purple-200/60 text-purple-900'}`}>
                   {statsSummary.withEmail}
                 </span>
@@ -1144,7 +1136,7 @@ function normalizeDistrictName(raw?: string | null): string {
                 onChange={(e) => setSelectedDistrict(e.target.value)}
                 className="text-xs font-semibold text-slate-700 bg-transparent outline-none cursor-pointer pr-2"
               >
-                <option value="ALL">ทุกอำเภอ/โซน ({districts.length})</option>
+                <option value="ALL">All Districts ({districts.length})</option>
                 {districts.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -1162,7 +1154,7 @@ function normalizeDistrictName(raw?: string | null): string {
                   onClick={() => setSelectedDistrict('ALL')}
                   className="shrink-0 flex items-center space-x-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#1b9b8e] text-white shadow-xs touch-press"
                 >
-                  <span>✕ ล้างโซน</span>
+                  <span>✕ Clear Zone</span>
                 </button>
               )}
               {districtZones.map((zone) => (
@@ -1189,7 +1181,7 @@ function normalizeDistrictName(raw?: string | null): string {
           {/* Locate Me (GPS) */}
           <button
             onClick={handleLocateMe}
-            title="ตำแหน่งของฉัน"
+            title="My Location"
             className="w-10 h-10 bg-white/95 backdrop-blur-md hover:bg-slate-50 text-slate-700 shadow-md rounded-2xl border border-slate-200/80 flex items-center justify-center touch-press"
           >
             <Crosshair className="w-5 h-5 text-[#1b9b8e]" />
@@ -1198,7 +1190,7 @@ function normalizeDistrictName(raw?: string | null): string {
           {/* Toggle Zone Borders */}
           <button
             onClick={() => setShowZones(!showZones)}
-            title="เปิด/ปิดเส้นขอบโซน"
+            title="Toggle Zone Boundaries"
             className={`w-10 h-10 rounded-2xl shadow-md border flex items-center justify-center touch-press transition-all ${
               showZones
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/30'
@@ -1211,7 +1203,7 @@ function normalizeDistrictName(raw?: string | null): string {
           {/* Toggle Drawer / Bottom Sheet */}
           <button
             onClick={() => setShowDrawer(!showDrawer)}
-            title="แสดงรายชื่อโรงงาน"
+            title="Toggle Factory List"
             className={`w-10 h-10 rounded-2xl shadow-md border flex items-center justify-center touch-press relative transition-all ${
               showDrawer
                 ? 'bg-[#1b9b8e] text-white border-[#1b9b8e] shadow-[#1b9b8e]/30'
@@ -1243,23 +1235,25 @@ function normalizeDistrictName(raw?: string | null): string {
                 <div className="space-y-0.5 min-w-0 flex-1">
                   <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                      {selectedFactory.district || 'สมุทรปราการ'}
+                      {selectedFactory.district || 'Samut Prakan'}
                     </span>
                     {distFromUser !== null && (
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        📍 ~{formatDistanceThai(distFromUser)} จากคุณ
+                        📍 ~{formatDistanceEng(distFromUser)} away
                       </span>
                     )}
-                    {(selectedFactory.activities_count !== undefined && selectedFactory.activities_count > 0) ||
-                    (selectedFactory.pipeline_stage && selectedFactory.pipeline_stage !== 'ยังไม่ได้ติดต่อ') ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        ✓ {selectedFactory.pipeline_stage || 'ติดต่อแล้ว'}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-[#148277] border border-teal-100">
-                        ⚪ ยังไม่ได้ติดต่อ
-                      </span>
-                    )}
+                    {(() => {
+                      const inPort = isFactoryInPortfolio(selectedFactory, myCustomers);
+                      return inPort ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          ⭐ In Portfolio
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-[#148277] border border-teal-200">
+                          ⚪ Available
+                        </span>
+                      );
+                    })()}
                   </div>
                   <h4 className="font-extrabold text-sm text-slate-900 leading-snug truncate pt-0.5">
                     {selectedFactory.name}
@@ -1276,23 +1270,22 @@ function normalizeDistrictName(raw?: string | null): string {
               {/* Quick Action Buttons */}
               <div className="grid grid-cols-5 gap-1 pt-1 border-t border-slate-100">
                 {(() => {
-                  const inPort = isCustomerInPortfolio(getCustomerFromFactory(selectedFactory), portfolioIds);
+                  const inPort = isFactoryInPortfolio(selectedFactory, myCustomers);
                   return (
                     <button
                       type="button"
                       onClick={() => {
-                        const cust = getCustomerFromFactory(selectedFactory);
-                        togglePortfolio(cust.id);
+                        togglePortfolio(selectedFactory);
                       }}
                       className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[10px] font-bold touch-press active:scale-95 transition-all ${
                         inPort
-                          ? 'bg-amber-500 text-white shadow-sm'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200/80 hover:bg-amber-100'
+                          ? 'bg-amber-500 text-white shadow-sm ring-1 ring-amber-400'
+                          : 'bg-teal-50 text-[#148277] border border-teal-200/80 hover:bg-teal-100'
                       }`}
-                      title={inPort ? 'อยู่ในพอร์ตแล้ว (คลิกเพื่อเอาออก)' : 'เพิ่มเข้าพอร์ตของฉัน'}
+                      title={inPort ? 'In portfolio (Click to remove)' : 'Add to My Portfolio'}
                     >
                       <Star className={`w-3.5 h-3.5 mb-0.5 ${inPort ? 'fill-current' : ''}`} />
-                      <span>{inPort ? 'ในพอร์ต' : '+ พอร์ต'}</span>
+                      <span>{inPort ? 'In Portfolio' : '+ Portfolio'}</span>
                     </button>
                   );
                 })()}
@@ -1303,12 +1296,12 @@ function normalizeDistrictName(raw?: string | null): string {
                     className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-sm touch-press active:scale-95"
                   >
                     <Phone className="w-3.5 h-3.5 mb-0.5" />
-                    <span>โทรออก</span>
+                    <span>Call</span>
                   </a>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-100 text-slate-400 text-[10px]">
                     <Phone className="w-3.5 h-3.5 mb-0.5" />
-                    <span>ไม่มีเบอร์</span>
+                    <span>No Phone</span>
                   </div>
                 )}
 
@@ -1329,7 +1322,7 @@ function normalizeDistrictName(raw?: string | null): string {
                       selectedFactory.email ? 'text-indigo-600' : 'text-slate-400'
                     }`}
                   />
-                  <span>{selectedFactory.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+                  <span>{selectedFactory.email ? 'Send Email' : 'Compose'}</span>
                 </button>
 
                 {selectedFactory.latitude && selectedFactory.longitude ? (
@@ -1343,21 +1336,21 @@ function normalizeDistrictName(raw?: string | null): string {
                     className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#148277] border border-teal-200/80 text-[10px] font-bold touch-press"
                   >
                     <Navigation className="w-3.5 h-3.5 mb-0.5 text-[#1b9b8e]" />
-                    <span>นำทาง</span>
+                    <span>Route</span>
                   </a>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
                     <Navigation className="w-3.5 h-3.5 mb-0.5" />
-                    <span>ไม่มีพิกัด</span>
+                    <span>No GPS</span>
                   </div>
                 )}
 
                 <button
                   onClick={() => setIsDetailModalOpen(true)}
-                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-sm text-[10px] font-bold touch-press active:scale-95"
                 >
-                  <Edit className="w-3.5 h-3.5 mb-0.5" />
-                  <span>บันทึก</span>
+                  <Building2 className="w-3.5 h-3.5 mb-0.5 text-teal-300" />
+                  <span>Details</span>
                 </button>
               </div>
             </div>
@@ -1367,8 +1360,8 @@ function normalizeDistrictName(raw?: string | null): string {
         {/* Floating Bottom Status Bar (Desktop only) */}
         <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/80 rounded-2xl p-3 hidden md:block max-w-2xl">
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>แผนที่โรงงานอัจฉริยะ (Smart Map)</span>
-            <span>แสดง {filteredFactories.length} / {unifiedFactories.length} โรงงาน</span>
+            <span>Samut Prakan Factory Explorer</span>
+            <span>Showing {filteredFactories.length} / {unifiedFactories.length} Factories</span>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <button
@@ -1379,7 +1372,7 @@ function normalizeDistrictName(raw?: string | null): string {
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <span>ทั้งหมด ({statsSummary.total})</span>
+              <span>All ({statsSummary.total})</span>
             </button>
             <button
               onClick={() => setContactFilter(contactFilter === 'PORTFOLIO' ? 'ALL' : 'PORTFOLIO')}
@@ -1390,29 +1383,18 @@ function normalizeDistrictName(raw?: string | null): string {
               }`}
             >
               <Star className="w-3.5 h-3.5 fill-current" />
-              <span>ลูกค้าในพอร์ต ({statsSummary.inPortfolio})</span>
+              <span>In Portfolio ({statsSummary.inPortfolio})</span>
             </button>
             <button
-              onClick={() => setContactFilter(contactFilter === 'CONTACTED' ? 'ALL' : 'CONTACTED')}
+              onClick={() => setContactFilter(contactFilter === 'NOT_PORTFOLIO' ? 'ALL' : 'NOT_PORTFOLIO')}
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
-                contactFilter === 'CONTACTED'
-                  ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-400'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>ติดต่อแล้ว ({statsSummary.contacted})</span>
-            </button>
-            <button
-              onClick={() => setContactFilter(contactFilter === 'UNCONTACTED' ? 'ALL' : 'UNCONTACTED')}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
-                contactFilter === 'UNCONTACTED'
-                  ? 'bg-[#1b9b8e] text-white border-[#1b9b8e] ring-2 ring-teal-400'
+                contactFilter === 'NOT_PORTFOLIO'
+                  ? 'bg-[#1b9b8e] text-white border-[#1b9b8e] ring-2 ring-teal-300'
                   : 'bg-teal-50 border-teal-200 text-[#148277] hover:bg-teal-100'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-[#1b9b8e]" />
-              <span>ยังไม่ได้ติดต่อ ({statsSummary.uncontacted})</span>
+              <span>Available ({statsSummary.notInPortfolio})</span>
             </button>
             <button
               onClick={() => setContactFilter(contactFilter === 'WITH_EMAIL' ? 'ALL' : 'WITH_EMAIL')}
@@ -1423,7 +1405,7 @@ function normalizeDistrictName(raw?: string | null): string {
               }`}
             >
               <Mail className="w-3.5 h-3.5" />
-              <span>เฉพาะมีอีเมล ({statsSummary.withEmail})</span>
+              <span>With Email ({statsSummary.withEmail})</span>
             </button>
           </div>
         </div>
@@ -1441,7 +1423,7 @@ function normalizeDistrictName(raw?: string | null): string {
           <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
             <div className="space-y-1.5">
               <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-1.5">
-                <span>รายชื่อโรงงานในพื้นที่</span>
+                <span>Factories in Area</span>
                 <span className="px-2 py-0.5 rounded-full bg-teal-100 text-[#148277] text-xs font-bold">
                   {filteredFactories.length}
                 </span>
@@ -1456,7 +1438,7 @@ function normalizeDistrictName(raw?: string | null): string {
                   }`}
                 >
                   <Mail className="w-3 h-3" />
-                  <span>{contactFilter === 'WITH_EMAIL' ? '✓ กำลังแสดงเฉพาะมีเมล' : `เฉพาะมีเมล (${statsSummary.withEmail})`}</span>
+                  <span>{contactFilter === 'WITH_EMAIL' ? '✓ Showing With Email' : `With Email (${statsSummary.withEmail})`}</span>
                 </button>
               </div>
             </div>
@@ -1473,16 +1455,13 @@ function normalizeDistrictName(raw?: string | null): string {
             {filteredFactories.length === 0 ? (
               <div className="text-center py-12 px-4 space-y-2">
                 <AlertCircle className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-sm font-semibold text-slate-600">ไม่พบโรงงานตามเงื่อนไข</p>
-                <p className="text-xs text-slate-400">ลองล้างตัวกรองหรือเปลี่ยนคำค้นหา</p>
+                <p className="text-sm font-semibold text-slate-600">No factories found</p>
+                <p className="text-xs text-slate-400">Try clearing filters or changing search keywords</p>
               </div>
             ) : (
               filteredFactories.map((fact) => {
-                const stageConf = getStageConfig(fact.pipeline_stage);
                 const isSelected = selectedFactory?.id === fact.id;
-                const isContacted =
-                  (fact.activities_count !== undefined && fact.activities_count > 0) ||
-                  (fact.pipeline_stage && fact.pipeline_stage !== 'ยังไม่ได้ติดต่อ');
+                const inPort = isFactoryInPortfolio(fact, myCustomers);
 
                 return (
                   <div
@@ -1491,23 +1470,26 @@ function normalizeDistrictName(raw?: string | null): string {
                     className={`p-3 rounded-xl border transition-all cursor-pointer touch-press ${
                       isSelected
                         ? 'bg-teal-50/95 border-[#1b9b8e] ring-2 ring-[#1b9b8e]/40 shadow-md scale-[1.01]'
+                        : inPort
+                        ? 'bg-amber-50/40 border-amber-200/80 hover:bg-amber-50/70'
                         : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50/60'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                          <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
-                            {fact.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
-                          </span>
-                          {fact.activities_count !== undefined && fact.activities_count > 0 && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              ✓ {fact.activities_count} กิจกรรม
+                          {inPort ? (
+                            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                              ⭐ In Portfolio
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-teal-50 text-[#148277] border border-teal-200">
+                              ⚪ Available
                             </span>
                           )}
                           {isSelected && (
                             <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#1b9b8e] text-white animate-pulse">
-                              📍 กำลังเลือก
+                              📍 Selected
                             </span>
                           )}
                         </div>
@@ -1518,32 +1500,26 @@ function normalizeDistrictName(raw?: string | null): string {
 
                         <p className="text-[11px] text-slate-500 truncate flex items-center space-x-1">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{fact.district || fact.address || 'สมุทรปราการ'}</span>
+                          <span>{fact.district || fact.address || 'Samut Prakan'}</span>
                         </p>
                       </div>
 
                       <div className="flex items-center space-x-1 shrink-0">
-                        {(() => {
-                          const cust = getCustomerFromFactory(fact);
-                          const inPort = isCustomerInPortfolio(cust, portfolioIds);
-                          return (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                togglePortfolio(cust.id);
-                              }}
-                              className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-                                inPort
-                                  ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
-                                  : 'bg-slate-100 hover:bg-amber-50 text-slate-400 hover:text-amber-600'
-                              }`}
-                              title={inPort ? 'อยู่ในพอร์ตแล้ว (คลิกเพื่อเอาออก)' : 'เพิ่มเข้าพอร์ต'}
-                            >
-                              <Star className={`w-4 h-4 ${inPort ? 'fill-amber-500 text-amber-500' : ''}`} />
-                            </button>
-                          );
-                        })()}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePortfolio(fact);
+                          }}
+                          className={`p-1.5 rounded-lg shrink-0 transition-all ${
+                            inPort
+                              ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 ring-1 ring-amber-300'
+                              : 'bg-teal-50 hover:bg-teal-100 text-[#148277] border border-teal-200/80'
+                          }`}
+                          title={inPort ? 'In portfolio (Click to remove)' : 'Add to My Portfolio'}
+                        >
+                          <Star className={`w-4 h-4 ${inPort ? 'fill-amber-500 text-amber-500' : ''}`} />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1553,7 +1529,7 @@ function normalizeDistrictName(raw?: string | null): string {
                           className={`p-1.5 rounded-lg shrink-0 transition-colors ${
                             isSelected ? 'bg-[#1b9b8e] text-white' : 'bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-[#148277]'
                           }`}
-                          title="ดูรายละเอียด & บันทึกงานขาย"
+                          title="View Details"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -1570,7 +1546,7 @@ function normalizeDistrictName(raw?: string | null): string {
                               onClick={(e) => e.stopPropagation()}
                               className="text-emerald-600 font-semibold hover:underline"
                             >
-                              โทรเลย
+                              Call Now
                             </a>
                           </div>
                         )}
@@ -1588,7 +1564,7 @@ function normalizeDistrictName(raw?: string | null): string {
                               }}
                               className="px-2 py-0.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] shadow-2xs transition-colors shrink-0"
                             >
-                              ส่งอีเมล
+                              Send Email
                             </button>
                           </div>
                         )}
@@ -1608,6 +1584,7 @@ function normalizeDistrictName(raw?: string | null): string {
           customer={getCustomerFromFactory(selectedFactory)}
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
+          hidePipelineSelector={true}
           onCustomerUpdated={(updated) => {
             handleSaveAndSyncCustomer(updated);
           }}

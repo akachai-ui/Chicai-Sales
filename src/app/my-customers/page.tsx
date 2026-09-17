@@ -2,18 +2,19 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { Customer, PIPELINE_STAGES, getStageConfig } from '@/types/customer';
-import { fetchAllCustomers, subscribeToRealtimeChanges, supabase } from '@/lib/supabase';
+import { Customer, MyCustomer, PIPELINE_STAGES, getStageConfig, getStageDisplayLabel } from '@/types/customer';
+import { fetchAllCustomers, fetchMyCustomers, subscribeToRealtimeChanges, supabase } from '@/lib/supabase';
 import {
-  getMyPortfolioIds,
-  addToPortfolio,
-  removeFromPortfolio,
-  togglePortfolio,
+  getLocalMyCustomers,
+  addToMyCustomers,
+  removeFromMyCustomers,
   subscribeToPortfolioChanges,
+  syncMyCustomersFromSupabase,
+  isFactoryInPortfolio,
 } from '@/lib/portfolio';
 import CustomerDetailModal from '@/components/map/CustomerDetailModal';
 import EmailComposeModal from '@/components/common/EmailComposeModal';
-import { getDbdSearchUrl } from '@/lib/utils';
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import Link from 'next/link';
 import {
   Users,
@@ -23,28 +24,20 @@ import {
   Phone,
   Mail,
   MapPin,
-  ExternalLink,
-  Building,
   CheckCircle2,
   CalendarCheck,
   PhoneCall,
   Edit,
   LayoutGrid,
   List as ListIcon,
-  Sparkles,
-  ArrowRight,
-  Filter,
   CheckSquare,
-  Square,
   X,
-  Star,
-  Globe,
   Loader2,
 } from 'lucide-react';
 
 export default function MyCustomersPage() {
-  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
-  const [portfolioIds, setPortfolioIds] = useState<number[]>([]);
+  const [myCustomers, setMyCustomers] = useState<MyCustomer[]>([]);
+  const [allMasterCustomers, setAllMasterCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Search & Filter State inside My Portfolio
@@ -54,23 +47,31 @@ export default function MyCustomersPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Modal State for Selected Customer Detail & Email
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | MyCustomer | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
+  const [emailCustomer, setEmailCustomer] = useState<Customer | MyCustomer | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
-  // "+ ดึงลูกค้าจากฐานข้อมูล" Importer Modal State
+  // Delete Confirmation Modal State
+  const [customerToDelete, setCustomerToDelete] = useState<MyCustomer | null>(null);
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
+
+  // Importer Modal State
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [importerSearch, setImporterSearch] = useState('');
   const [importerDistrict, setImporterDistrict] = useState('ALL');
   const [importerStage, setImporterStage] = useState('ALL');
   const [selectedToImport, setSelectedToImport] = useState<Set<number>>(new Set());
 
-  // Load all customers from Supabase
+  // Load my_customers & master customers
   const loadData = async () => {
     try {
-      const data = await fetchAllCustomers();
-      if (data) setAllCustomers(data);
+      const [myCusts, masterCusts] = await Promise.all([
+        fetchMyCustomers(),
+        fetchAllCustomers(),
+      ]);
+      if (myCusts) setMyCustomers(myCusts);
+      if (masterCusts) setAllMasterCustomers(masterCusts);
     } catch (e) {
       console.error('Error fetching customers:', e);
     } finally {
@@ -79,15 +80,23 @@ export default function MyCustomersPage() {
   };
 
   useEffect(() => {
-    loadData();
-    setPortfolioIds(getMyPortfolioIds());
+    const cached = getLocalMyCustomers();
+    if (cached.length > 0) {
+      setMyCustomers(cached);
+    }
 
-    const unsubPortfolio = subscribeToPortfolioChanges((ids) => {
-      setPortfolioIds(ids);
+    loadData();
+
+    // Listen to local / realtime portfolio updates
+    const unsubPortfolio = subscribeToPortfolioChanges((list) => {
+      setMyCustomers(list);
     });
 
-    const unsubRealtime = subscribeToRealtimeChanges(['customers'], () => {
-      loadData();
+    // Realtime Supabase changes
+    const unsubRealtime = subscribeToRealtimeChanges(['my_customers'], () => {
+      syncMyCustomersFromSupabase().then((data) => {
+        if (data) setMyCustomers(data);
+      });
     });
 
     return () => {
@@ -96,32 +105,27 @@ export default function MyCustomersPage() {
     };
   }, []);
 
-  // Filter customers that are currently in portfolio
-  const portfolioCustomers = useMemo(() => {
-    const pSet = new Set(portfolioIds);
-    return allCustomers.filter((c) => pSet.has(c.id));
-  }, [allCustomers, portfolioIds]);
-
-  // Compute District lists
+  // Compute District lists from portfolio
   const availableDistricts = useMemo(() => {
     const set = new Set<string>();
-    portfolioCustomers.forEach((c) => {
+    myCustomers.forEach((c) => {
       if (c.district) set.add(c.district);
     });
     return Array.from(set).sort();
-  }, [portfolioCustomers]);
+  }, [myCustomers]);
 
+  // Master customer districts for importer
   const allDistricts = useMemo(() => {
     const set = new Set<string>();
-    allCustomers.forEach((c) => {
+    allMasterCustomers.forEach((c) => {
       if (c.district) set.add(c.district);
     });
     return Array.from(set).sort();
-  }, [allCustomers]);
+  }, [allMasterCustomers]);
 
   // Filtered Portfolio Customers for display
   const filteredCustomers = useMemo(() => {
-    return portfolioCustomers.filter((c) => {
+    return myCustomers.filter((c) => {
       if (selectedStage !== 'ALL' && c.pipeline_stage !== selectedStage) {
         return false;
       }
@@ -142,18 +146,18 @@ export default function MyCustomersPage() {
       }
       return true;
     });
-  }, [portfolioCustomers, selectedStage, selectedDistrict, searchQuery]);
+  }, [myCustomers, selectedStage, selectedDistrict, searchQuery]);
 
   // Stats calculation
   const stats = useMemo(() => {
-    const total = portfolioCustomers.length;
+    const total = myCustomers.length;
     let uncontacted = 0;
     let inProgress = 0;
     let demo = 0;
     let won = 0;
     let withEmail = 0;
 
-    portfolioCustomers.forEach((c) => {
+    myCustomers.forEach((c) => {
       const st = c.pipeline_stage || 'ยังไม่ได้ติดต่อ';
       if (st === 'ยังไม่ได้ติดต่อ') uncontacted++;
       else if (st.includes('นัดหมาย') || st.includes('Demo')) demo++;
@@ -164,13 +168,13 @@ export default function MyCustomersPage() {
     });
 
     return { total, uncontacted, inProgress, demo, won, withEmail };
-  }, [portfolioCustomers]);
+  }, [myCustomers]);
 
-  // Handle stage change directly from table/card
+  // Handle stage change directly on my_customers table
   const handleStageChange = async (customerId: number, newStage: string) => {
     try {
       const { data, error } = await supabase
-        .from('customers')
+        .from('my_customers')
         .update({
           pipeline_stage: newStage,
           updated_at: new Date().toISOString(),
@@ -180,19 +184,18 @@ export default function MyCustomersPage() {
         .single();
 
       if (!error && data) {
-        setAllCustomers((prev) =>
-          prev.map((c) => (c.id === customerId ? (data as Customer) : c))
+        setMyCustomers((prev) =>
+          prev.map((c) => (c.id === customerId ? (data as MyCustomer) : c))
         );
       }
     } catch (e) {
-      console.error('Failed to update stage:', e);
+      console.error('Failed to update stage in my_customers:', e);
     }
   };
 
   // Importer filtered candidates
   const importerCandidates = useMemo(() => {
-    const pSet = new Set(portfolioIds);
-    return allCustomers.filter((c) => {
+    return allMasterCustomers.filter((c) => {
       if (importerDistrict !== 'ALL' && c.district !== importerDistrict) {
         return false;
       }
@@ -211,12 +214,13 @@ export default function MyCustomersPage() {
       }
       return true;
     });
-  }, [allCustomers, portfolioIds, importerDistrict, importerStage, importerSearch]);
+  }, [allMasterCustomers, importerDistrict, importerStage, importerSearch]);
 
   // Bulk import action
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     if (selectedToImport.size === 0) return;
-    addToPortfolio(Array.from(selectedToImport));
+    const selectedCustomers = allMasterCustomers.filter((c) => selectedToImport.has(c.id));
+    await addToMyCustomers(selectedCustomers);
     setSelectedToImport(new Set());
     setIsImporterOpen(false);
   };
@@ -231,7 +235,7 @@ export default function MyCustomersPage() {
   };
 
   const handleSelectAllImporter = () => {
-    const unimported = importerCandidates.filter((c) => !portfolioIds.includes(c.id));
+    const unimported = importerCandidates.filter((c) => !isFactoryInPortfolio(c, myCustomers));
     if (selectedToImport.size === unimported.length) {
       setSelectedToImport(new Set());
     } else {
@@ -251,13 +255,13 @@ export default function MyCustomersPage() {
             <div className="space-y-2">
               <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-[11px] sm:text-xs font-semibold text-teal-200">
                 <Users className="w-3.5 h-3.5 text-teal-300" />
-                <span>My Customer Portfolio</span>
+                <span>Customer Relationship Management</span>
               </div>
               <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">
-                ลูกค้าของฉัน (พอร์ตโฟลิโอ)
+                My Customer Portfolio
               </h1>
               <p className="text-xs sm:text-sm text-teal-100/90 max-w-xl leading-relaxed">
-                โรงงานที่คุณเลือกดึงมาดูแลเพื่อโฟกัสงานขาย ติดตามสถานะ และวางแผนเข้าพบลูกค้า
+                Factories in your sales portfolio for status tracking, pipeline updates, and visit planning
               </p>
             </div>
 
@@ -267,7 +271,7 @@ export default function MyCustomersPage() {
                 className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white text-[#148277] font-bold text-xs sm:text-sm shadow-md hover:bg-teal-50 transition-all touch-press active:scale-95"
               >
                 <Plus className="w-4 h-4 text-[#1b9b8e]" />
-                <span>+ ดึงลูกค้าเข้าพอร์ต</span>
+                <span>+ Import to Portfolio</span>
               </button>
 
               <Link
@@ -275,7 +279,7 @@ export default function MyCustomersPage() {
                 className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-xs sm:text-sm shadow-sm backdrop-blur transition-all touch-press"
               >
                 <MapPin className="w-4 h-4 text-teal-200" />
-                <span>ดูบนแผนที่</span>
+                <span>View on Map</span>
               </Link>
             </div>
           </div>
@@ -285,7 +289,7 @@ export default function MyCustomersPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">ในพอร์ตทั้งหมด</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Total Portfolio</span>
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-[#148277] flex items-center justify-center">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
@@ -293,12 +297,12 @@ export default function MyCustomersPage() {
             <div className="text-xl sm:text-3xl font-black text-slate-900">
               {loading ? '...' : stats.total}
             </div>
-            <span className="text-[10px] sm:text-[11px] text-slate-400 block">โรงงานที่เลือกดูแล</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 block">Assigned factories</span>
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">ยังไม่ได้ติดต่อ</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Uncontacted</span>
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
                 <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
@@ -306,12 +310,12 @@ export default function MyCustomersPage() {
             <div className="text-xl sm:text-3xl font-black text-slate-700">
               {loading ? '...' : stats.uncontacted}
             </div>
-            <span className="text-[10px] sm:text-[11px] text-slate-400 block">รอโทรเปิดงาน</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 block">Leads to contact</span>
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">นัดหมาย Demo</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Demo Scheduled</span>
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-[#148277] flex items-center justify-center">
                 <CalendarCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
@@ -319,12 +323,12 @@ export default function MyCustomersPage() {
             <div className="text-xl sm:text-3xl font-black text-[#1b9b8e]">
               {loading ? '...' : stats.demo}
             </div>
-            <span className="text-[10px] sm:text-[11px] text-slate-400 block">นัดสาธิตเครื่อง</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 block">On-site machine demos</span>
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">ปิดการขายสำเร็จ</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-500">Closed / Won</span>
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
@@ -332,7 +336,7 @@ export default function MyCustomersPage() {
             <div className="text-xl sm:text-3xl font-black text-emerald-600">
               {loading ? '...' : stats.won}
             </div>
-            <span className="text-[10px] sm:text-[11px] text-slate-400 block">ลูกค้าซื้อเครื่องแล้ว</span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 block">Deals completed</span>
           </div>
         </div>
 
@@ -346,7 +350,7 @@ export default function MyCustomersPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาชื่อโรงงาน, เบอร์, อีเมล, ผู้ติดต่อ, สินค้า..."
+              placeholder="Search factory name, phone, email, contact, product..."
               className="w-full pl-9 pr-8 py-2 text-xs font-medium bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1b9b8e] focus:bg-white"
             />
             {searchQuery && (
@@ -368,10 +372,10 @@ export default function MyCustomersPage() {
               onChange={(e) => setSelectedStage(e.target.value)}
               className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 outline-none cursor-pointer"
             >
-              <option value="ALL">ทุกสถานะ Pipeline</option>
+              <option value="ALL">All Pipeline Stages</option>
               {PIPELINE_STAGES.map((s) => (
                 <option key={s.stage} value={s.stage}>
-                  {s.stage}
+                  {s.label}
                 </option>
               ))}
             </select>
@@ -383,7 +387,7 @@ export default function MyCustomersPage() {
                 onChange={(e) => setSelectedDistrict(e.target.value)}
                 className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 outline-none cursor-pointer"
               >
-                <option value="ALL">ทุกอำเภอ ({availableDistricts.length})</option>
+                <option value="ALL">All Districts ({availableDistricts.length})</option>
                 {availableDistricts.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -401,7 +405,7 @@ export default function MyCustomersPage() {
                     ? 'bg-white text-[#148277] shadow-xs'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
-                title="มุมมองการ์ด (Grid View)"
+                title="Grid View"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -412,7 +416,7 @@ export default function MyCustomersPage() {
                     ? 'bg-white text-[#148277] shadow-xs'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
-                title="มุมมองตาราง (Table View)"
+                title="Table View"
               >
                 <ListIcon className="w-4 h-4" />
               </button>
@@ -425,9 +429,9 @@ export default function MyCustomersPage() {
         {loading ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-[#1b9b8e] mx-auto" />
-            <p className="text-sm font-semibold text-slate-600">กำลังโหลดลูกค้าในพอร์ตโฟลิโอของคุณ...</p>
+            <p className="text-sm font-semibold text-slate-600">Loading your customer portfolio...</p>
           </div>
-        ) : portfolioCustomers.length === 0 ? (
+        ) : myCustomers.length === 0 ? (
           /* Empty State */
           <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-14 text-center space-y-4 shadow-xs">
             <div className="w-16 h-16 rounded-2xl bg-teal-50 text-[#1b9b8e] flex items-center justify-center mx-auto shadow-sm">
@@ -435,10 +439,10 @@ export default function MyCustomersPage() {
             </div>
             <div className="space-y-1 max-w-md mx-auto">
               <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                ยังไม่มีลูกค้าในพอร์ตของคุณ
+                No customers in your portfolio yet
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                คุณสามารถกดปุ่มด้านล่างเพื่อเลือกดึงโรงงานจากฐานข้อมูลกลาง (1,089 แห่ง) หรือกดติดดาว ⭐ จากบนแผนที่
+                You can import factories from the central database or add them directly from the interactive map.
               </p>
             </div>
             <div className="pt-2 flex flex-wrap justify-center gap-3">
@@ -447,14 +451,14 @@ export default function MyCustomersPage() {
                 className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white font-bold text-xs sm:text-sm shadow-sm transition-all touch-press active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ ดึงลูกค้าจากฐานข้อมูลเข้าพอร์ต</span>
+                <span>+ Import from Database</span>
               </button>
               <Link
                 href="/map"
                 className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-all touch-press"
               >
                 <MapPin className="w-4 h-4 text-slate-500" />
-                <span>เลือกจากแผนที่</span>
+                <span>Select from Map</span>
               </Link>
             </div>
           </div>
@@ -462,8 +466,8 @@ export default function MyCustomersPage() {
           /* Search Empty State */
           <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
             <Search className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-sm font-semibold text-slate-700">ไม่พบลูกค้าตามเงื่อนไขที่ค้นหา</p>
-            <p className="text-xs text-slate-400">ลองล้างคำค้นหาหรือตัวกรอง</p>
+            <p className="text-sm font-semibold text-slate-700">No factories found matching your search</p>
+            <p className="text-xs text-slate-400">Try adjusting your search terms or filters</p>
           </div>
         ) : viewMode === 'grid' ? (
           /* Grid Card View */
@@ -486,15 +490,15 @@ export default function MyCustomersPage() {
                       >
                         {PIPELINE_STAGES.map((s) => (
                           <option key={s.stage} value={s.stage}>
-                            {s.stage}
+                            {s.label}
                           </option>
                         ))}
                       </select>
 
                       <button
-                        onClick={() => removeFromPortfolio(cust.id)}
+                        onClick={() => setCustomerToDelete(cust)}
                         className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        title="นำออกจากพอร์ตของฉัน"
+                        title="Remove from My Portfolio"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -515,7 +519,7 @@ export default function MyCustomersPage() {
                     <div className="space-y-1 text-xs text-slate-600">
                       <p className="flex items-center space-x-1.5 truncate text-[11px] text-slate-500">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{cust.district || cust.address || 'สมุทรปราการ'}</span>
+                        <span className="truncate">{cust.district || cust.address || 'Samut Prakan'}</span>
                       </p>
 
                       {cust.contact_person && (
@@ -539,15 +543,15 @@ export default function MyCustomersPage() {
                       <a
                         href={`tel:${cust.phone.replace(/\s+/g, '')}`}
                         className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] transition-colors"
-                        title={`โทร ${cust.phone}`}
+                        title={`Call ${cust.phone}`}
                       >
                         <Phone className="w-3.5 h-3.5 mb-0.5 text-emerald-600" />
-                        <span>โทร</span>
+                        <span>Call</span>
                       </a>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-slate-50 text-slate-300 text-[10px]">
                         <Phone className="w-3.5 h-3.5 mb-0.5" />
-                        <span>ไม่มีเบอร์</span>
+                        <span>No Tel</span>
                       </div>
                     )}
 
@@ -562,10 +566,10 @@ export default function MyCustomersPage() {
                           ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-500'
                       }`}
-                      title={cust.email ? `ส่งอีเมลถึง ${cust.email}` : 'เขียนอีเมล'}
+                      title={cust.email ? `Send email to ${cust.email}` : 'Compose Email'}
                     >
                       <Mail className={`w-3.5 h-3.5 mb-0.5 ${cust.email ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      <span>{cust.email ? 'ส่งเมล' : 'เขียนเมล'}</span>
+                      <span>{cust.email ? 'Email' : 'Compose'}</span>
                     </button>
 
                     <a
@@ -578,10 +582,10 @@ export default function MyCustomersPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-[#148277] font-bold text-[10px] transition-colors"
-                      title="เปิด Google Maps"
+                      title="Open Google Maps"
                     >
                       <MapPin className="w-3.5 h-3.5 mb-0.5 text-[#1b9b8e]" />
-                      <span>แผนที่</span>
+                      <span>Map</span>
                     </a>
 
                     <button
@@ -590,10 +594,10 @@ export default function MyCustomersPage() {
                         setIsDetailModalOpen(true);
                       }}
                       className="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white font-bold text-[10px] transition-colors active:scale-95"
-                      title="ดูรายละเอียด & บันทึกข้อมูล"
+                      title="View Details & Update"
                     >
                       <Edit className="w-3.5 h-3.5 mb-0.5" />
-                      <span>จัดการ</span>
+                      <span>Manage</span>
                     </button>
                   </div>
                 </div>
@@ -607,12 +611,12 @@ export default function MyCustomersPage() {
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4">ชื่อโรงงาน</th>
-                    <th className="py-3 px-3">อำเภอ/โซน</th>
-                    <th className="py-3 px-3">สถานะ Sales Pipeline</th>
-                    <th className="py-3 px-3">ผู้ติดต่อ / สินค้าเป้าหมาย</th>
-                    <th className="py-3 px-3">เบอร์โทร & อีเมล</th>
-                    <th className="py-3 px-4 text-right">การจัดการ</th>
+                    <th className="py-3 px-4">Factory Name</th>
+                    <th className="py-3 px-3">District / Area</th>
+                    <th className="py-3 px-3">Pipeline Stage</th>
+                    <th className="py-3 px-3">Contact / Target Product</th>
+                    <th className="py-3 px-3">Phone & Email</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -633,7 +637,7 @@ export default function MyCustomersPage() {
                           </div>
                         </td>
                         <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
-                          {cust.district || 'สมุทรปราการ'}
+                          {cust.district || 'Samut Prakan'}
                         </td>
                         <td className="py-3 px-3 whitespace-nowrap">
                           <select
@@ -643,7 +647,7 @@ export default function MyCustomersPage() {
                           >
                             {PIPELINE_STAGES.map((s) => (
                               <option key={s.stage} value={s.stage}>
-                                {s.stage}
+                                {s.label}
                               </option>
                             ))}
                           </select>
@@ -664,7 +668,7 @@ export default function MyCustomersPage() {
                               📞 {cust.phone}
                             </a>
                           ) : (
-                            <span className="text-slate-300 block">ไม่มีเบอร์</span>
+                            <span className="text-slate-300 block">No Tel</span>
                           )}
                           {cust.email && (
                             <button
@@ -686,12 +690,12 @@ export default function MyCustomersPage() {
                             }}
                             className="px-2.5 py-1 rounded-lg bg-[#1b9b8e] hover:bg-[#148277] text-white font-bold text-xs shadow-xs"
                           >
-                            จัดการ
+                            Manage
                           </button>
                           <button
-                            onClick={() => removeFromPortfolio(cust.id)}
+                            onClick={() => setCustomerToDelete(cust)}
                             className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50"
-                            title="นำออกจากพอร์ต"
+                            title="Remove from Portfolio"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -707,7 +711,7 @@ export default function MyCustomersPage() {
 
       </main>
 
-      {/* "+ ดึงลูกค้าจากฐานข้อมูล" Importer Modal */}
+      {/* Importer Modal */}
       {isImporterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200/80">
@@ -717,14 +721,14 @@ export default function MyCustomersPage() {
               <div>
                 <div className="flex items-center space-x-2">
                   <h3 className="text-base sm:text-xl font-bold text-slate-900">
-                    ดึงโรงงานจากฐานข้อมูลเข้าพอร์ต
+                    Import Factories to Portfolio
                   </h3>
                   <span className="px-2 py-0.5 rounded-full bg-teal-100 text-[#148277] text-xs font-bold">
-                    {allCustomers.length} โรงงานทั้งหมด
+                    {allMasterCustomers.length} Total Master Database
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  เลือกโรงงานที่ต้องการดึงเข้ามาดูแลในพอร์ตของคุณ (สามารถเลือกหลายโรงงานพร้อมกันได้)
+                  Select factories to import into your personal sales portfolio (bulk select supported)
                 </p>
               </div>
 
@@ -744,7 +748,7 @@ export default function MyCustomersPage() {
                   type="text"
                   value={importerSearch}
                   onChange={(e) => setImporterSearch(e.target.value)}
-                  placeholder="ค้นหาชื่อโรงงาน, เบอร์, อำเภอ..."
+                  placeholder="Search factory name, phone, district..."
                   className="w-full pl-9 pr-4 py-2 text-xs font-medium bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#1b9b8e] focus:bg-white"
                 />
               </div>
@@ -754,7 +758,7 @@ export default function MyCustomersPage() {
                 onChange={(e) => setImporterDistrict(e.target.value)}
                 className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 outline-none w-full sm:w-auto"
               >
-                <option value="ALL">ทุกอำเภอ ({allDistricts.length})</option>
+                <option value="ALL">All Districts ({allDistricts.length})</option>
                 {allDistricts.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -767,10 +771,10 @@ export default function MyCustomersPage() {
                 onChange={(e) => setImporterStage(e.target.value)}
                 className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 outline-none w-full sm:w-auto"
               >
-                <option value="ALL">ทุกสถานะ</option>
+                <option value="ALL">All Pipeline Stages</option>
                 {PIPELINE_STAGES.map((s) => (
                   <option key={s.stage} value={s.stage}>
-                    {s.stage}
+                    {s.label}
                   </option>
                 ))}
               </select>
@@ -784,13 +788,13 @@ export default function MyCustomersPage() {
                   className="flex items-center space-x-1.5 text-[#148277] hover:underline"
                 >
                   <CheckSquare className="w-4 h-4" />
-                  <span>เลือก/ยกเลิก ทั้งหมดที่ยังไม่อยู่ในพอร์ต</span>
+                  <span>Select / Deselect all available</span>
                 </button>
-                <span>พบ {importerCandidates.length} รายการ</span>
+                <span>Found {importerCandidates.length} factories</span>
               </div>
 
               {importerCandidates.map((cust) => {
-                const inPortfolio = portfolioIds.includes(cust.id);
+                const inPortfolio = isFactoryInPortfolio(cust, myCustomers);
                 const isSelected = selectedToImport.has(cust.id);
                 const stageConf = getStageConfig(cust.pipeline_stage);
 
@@ -821,10 +825,10 @@ export default function MyCustomersPage() {
                       <div className="space-y-0.5 min-w-0 flex-1">
                         <div className="flex items-center space-x-2 flex-wrap gap-y-0.5">
                           <span className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border ${stageConf.bg} ${stageConf.color} ${stageConf.border}`}>
-                            {cust.pipeline_stage || 'ยังไม่ได้ติดต่อ'}
+                            {stageConf.label}
                           </span>
                           <span className="text-[10px] text-slate-500">
-                            📍 {cust.district || cust.address || 'สมุทรปราการ'}
+                            📍 {cust.district || cust.address || 'Samut Prakan'}
                           </span>
                         </div>
                         <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
@@ -840,17 +844,17 @@ export default function MyCustomersPage() {
                     <div className="shrink-0">
                       {inPortfolio ? (
                         <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-200 text-slate-600">
-                          ✓ อยู่ในพอร์ตแล้ว
+                          ✓ In Portfolio
                         </span>
                       ) : (
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            addToPortfolio(cust.id);
+                            await addToMyCustomers(cust);
                           }}
                           className="px-3 py-1.5 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white font-bold text-xs shadow-xs touch-press active:scale-95"
                         >
-                          + ดึงเข้าพอร์ต
+                          + Import
                         </button>
                       )}
                     </div>
@@ -862,7 +866,7 @@ export default function MyCustomersPage() {
             {/* Modal Footer with Bulk Action */}
             <div className="p-4 border-t border-slate-100 bg-slate-50/90 flex items-center justify-between shrink-0">
               <span className="text-xs font-semibold text-slate-600">
-                เลือกแล้ว: <b>{selectedToImport.size}</b> รายการ
+                Selected: <b>{selectedToImport.size}</b> factories
               </span>
 
               <div className="flex items-center space-x-2">
@@ -870,14 +874,14 @@ export default function MyCustomersPage() {
                   onClick={() => setIsImporterOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl"
                 >
-                  ปิด
+                  Close
                 </button>
                 <button
                   onClick={handleBulkImport}
                   disabled={selectedToImport.size === 0}
                   className="px-5 py-2.5 rounded-xl bg-[#1b9b8e] hover:bg-[#148277] text-white font-bold text-xs shadow-md disabled:opacity-40 transition-all touch-press active:scale-95"
                 >
-                  ดึงเข้าพอร์ตพร้อมกัน ({selectedToImport.size})
+                  Import Selected ({selectedToImport.size})
                 </button>
               </div>
             </div>
@@ -886,23 +890,45 @@ export default function MyCustomersPage() {
         </div>
       )}
 
+      {/* Delete / Remove Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(customerToDelete)}
+        title="Remove Customer from Portfolio?"
+        message={`Are you sure you want to remove "${customerToDelete?.name}" from your active portfolio? The factory will still remain in the master Factory Map.`}
+        confirmLabel="Remove"
+        isDeleting={isDeletingCustomer}
+        onClose={() => setCustomerToDelete(null)}
+        onConfirm={async () => {
+          if (!customerToDelete) return;
+          setIsDeletingCustomer(true);
+          try {
+            await removeFromMyCustomers(customerToDelete.id);
+            setCustomerToDelete(null);
+          } catch (e) {
+            console.error('Error removing customer:', e);
+          } finally {
+            setIsDeletingCustomer(false);
+          }
+        }}
+      />
+
       {/* Customer Detail & Edit Modal */}
       <CustomerDetailModal
-        customer={selectedCustomer}
+        customer={selectedCustomer as Customer}
+        tableName="my_customers"
         isOpen={isDetailModalOpen}
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedCustomer(null);
         }}
         onCustomerUpdated={(updated) => {
-          setAllCustomers((prev) =>
-            prev.map((c) => (c.id === updated.id ? updated : c))
+          setMyCustomers((prev) =>
+            prev.map((c) => (c.id === updated.id ? (updated as MyCustomer) : c))
           );
           setSelectedCustomer(updated);
         }}
-        onCustomerDeleted={(deletedId) => {
-          setAllCustomers((prev) => prev.filter((c) => c.id !== deletedId));
-          removeFromPortfolio(deletedId);
+        onCustomerDeleted={async (deletedId) => {
+          await removeFromMyCustomers(deletedId);
           setIsDetailModalOpen(false);
           setSelectedCustomer(null);
         }}
@@ -911,7 +937,7 @@ export default function MyCustomersPage() {
       {/* Email Compose Modal */}
       <EmailComposeModal
         isOpen={isEmailModalOpen}
-        customer={emailCustomer}
+        customer={emailCustomer as Customer}
         onClose={() => {
           setIsEmailModalOpen(false);
           setEmailCustomer(null);

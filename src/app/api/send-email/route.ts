@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
     if (!email || !email.trim()) {
       return NextResponse.json(
-        { success: false, error: 'กรุณาระบุอีเมลผู้รับ' },
+        { success: false, error: 'Please specify recipient email' },
         { status: 400 }
       );
     }
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     if (!effectiveWebhookUrl) {
       return NextResponse.json(
-        { success: false, error: 'ยังไม่ได้ตั้งค่า Google Apps Script Webhook URL' },
+        { success: false, error: 'Google Apps Script Webhook URL is not configured' },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        companyName: companyName || 'ลูกค้า',
+        companyName: companyName || 'Customer',
         email: email.trim(),
         contactPerson: contactPerson || '',
       }),

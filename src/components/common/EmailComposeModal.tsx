@@ -78,10 +78,10 @@ export default function EmailComposeModal({
         setPreviousEmailLog({
           id: 0,
           customer_id: cust.id,
-          activity_type: "ติดต่อแล้ว",
+          activity_type: "Contacted",
           activity_date: cust.updated_at || new Date().toISOString().split("T")[0],
           contact_person: cust.contact_person || null,
-          details: `สถานะปัจจุบัน: ${cust.pipeline_stage}`,
+          details: `Current Status: ${cust.pipeline_stage}`,
           next_action_date: null,
           next_action_note: null,
         });
@@ -102,55 +102,55 @@ export default function EmailComposeModal({
   const getTemplateData = (type: "formal" | "concise" | "standard", custName: string) => {
     if (type === "formal") {
       return {
-        subject: `ขออนุญาตนำเสนอข้อมูลแคตตาล็อกเครื่องจักรอุตสาหกรรม - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
-        body: `เรียน ฝ่ายจัดซื้อ / ฝ่ายซ่อมบำรุงและวิศวกรรม ${custName}
+        subject: `Industrial Machinery Catalog & Solutions Introduction - Chicai Electric Co., Ltd. (${custName})`,
+        body: `Dear Purchasing / Maintenance & Engineering Team (${custName}),
 
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ขออนุญาตนำเสนอข้อมูลผลิตภัณฑ์เครื่องจักรอุตสาหกรรมสำหรับโรงงาน เพื่อช่วยเพิ่มประสิทธิภาพการผลิต ยืดอายุการใช้งานน้ำมันหล่อลื่น และลดค่าใช้จ่ายในกระบวนการผลิต:
+Chicai Electric (Thailand) Co., Ltd. would like to introduce our industrial filtration and recycling machinery solutions to help enhance production efficiency, extend lubrication oil life, and reduce operational costs:
 
-1. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกคู่) รุ่น LYJ-001-D: ความละเอียด 1 ไมครอน เสียบไฟ 220V ใช้งานได้ทันที
-2. เครื่องกรองน้ำมันอุตสาหกรรม (กระบอกเดี่ยว) รุ่น LYJ-001-S: กรองละเอียด 1 ไมครอน ขนาดกะทัดรัด เคลื่อนย้ายสะดวก
-3. เครื่องกำจัดตะกรันและเศษโลหะ รุ่น NXC-QZJ-116A: ระบบแรงดันลม ทำความสะอาดถังน้ำมันรวดเร็ว
-4. เครื่องฟื้นฟูน้ำยาหล่อเย็นและกำจัดกลิ่น รุ่น NXC-ZSJ-100: โอโซนฆ่าเชื้อ แยกน้ำมันลอย ช่วยยืดอายุน้ำยาหล่อเย็น
+1. Double Barrel Industrial Oil Purifier (Model: LYJ-001-D): 1-micron precision filtration, 220V plug-and-play.
+2. Single Barrel Industrial Oil Purifier (Model: LYJ-001-S): 1-micron high-precision filtration, compact and portable.
+3. Slag & Metal Chip Removal Machine (Model: NXC-QZJ-116A): Pneumatic pressure suction system for rapid tank cleaning.
+4. Coolant Fluid Purification & Deodorizing Machine (Model: NXC-ZSJ-100): Ozone sterilization and tramp oil separation to prolong coolant service life.
 
-ทางบริษัทยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานจริง (Demo On-site) ที่โรงงานของท่านโดยไม่มีค่าใช้จ่าย
+We provide complimentary On-site Demonstration (Demo On-site) at your factory facility with zero obligation.
 
-หากท่านต้องการรับไฟล์เอกสารแคตตาล็อกฉบับเต็ม (PDF) หรือสอบถามข้อมูลเพิ่มเติม สามารถตอบกลับอีเมลฉบับนี้ หรือติดต่อได้ตามข้อมูลด้านล่างนี้ครับ
+If you would like to receive the complete Product Catalog (PDF) or require further technical consultation, please feel free to reply to this email or contact us via the details below.
 
-ขอแสดงความนับถือ,
-เอกชัย หาบ้านแท่น (แม็ก)
-ฝ่ายขายและบริการเทคนิค โทร: 092-479-7666
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
+Best regards,
+Akachai Habantan (Max)
+Sales & Technical Service | Tel: +66 92 479 7666
+Chicai Electric (Thailand) Co., Ltd.`
       };
     } else if (type === "concise") {
       return {
-        subject: `ขออนุญาตสอบถามข้อมูลฝ่ายจัดซื้อ / ซ่อมบำรุง - บริษัท ชิไค อีเล็คทริค จำกัด (${custName})`,
-        body: `เรียน ฝ่ายจัดซื้อและซ่อมบำรุง ${custName}
+        subject: `Purchasing / Maintenance Inquiry - Chicai Electric Co., Ltd. (${custName})`,
+        body: `Dear Purchasing and Maintenance Team (${custName}),
 
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด ขออนุญาตสอบถามช่องทางติดต่อเพื่อส่งเอกสารแคตตาล็อกเครื่องกรองน้ำมันอุตสาหกรรมและฟื้นฟูน้ำยาหล่อเย็นสำหรับโรงงานครับ
+Chicai Electric (Thailand) Co., Ltd. would like to inquire about the appropriate contact channel to send our latest product catalog for industrial oil purification and coolant fluid recycling systems.
 
-หากท่านสะดวกรับข้อมูลผ่านอีเมลนี้ สามารถตอบกลับได้เลยครับ ทางเราจะจัดส่งไฟล์แคตตาล็อกและสเปกเครื่องจักรให้พิจารณาครับ
+If it is convenient to receive technical brochures via this email, please let us know by replying. We will promptly share our full specification sheets.
 
-ขอแสดงความนับถือ,
-เอกชัย หาบ้านแท่น (แม็ก)
-โทร: 092-479-7666
-บริษัท ชิไค อีเล็คทริค (ประเทศไทย) จำกัด`
+Best regards,
+Akachai Habantan (Max)
+Tel: +66 92 479 7666
+Chicai Electric (Thailand) Co., Ltd.`
       };
     } else {
       return {
-        subject: `[ข้อมูลผลิตภัณฑ์] โซลูชันเครื่องกรองน้ำมันและฟื้นฟูน้ำยาหล่อเย็น - ${custName}`,
-        body: `เรียน ฝ่ายจัดซื้อ และ ฝ่ายซ่อมบำรุง ${custName}
+        subject: `[Product Information] Industrial Oil & Coolant Purification Solutions - ${custName}`,
+        body: `Dear Purchasing and Maintenance Department (${custName}),
 
-CHICAI ELECTRIC ขอแนะนำ "ซีรีส์เครื่องจักรอัจฉริยะสำหรับฟื้นฟูคุณภาพน้ำมันและน้ำยาหล่อเย็น":
+CHICAI ELECTRIC presents our advanced machinery series for industrial fluid recovery and maintenance:
 
-1. เครื่องกรองน้ำมัน (กระบอกคู่) รุ่น LYJ-001-D
-2. เครื่องกรองน้ำมัน (กระบอกเดี่ยว) รุ่น LYJ-001-S
-3. เครื่องกำจัดตะกรัน รุ่น NXC-QZJ-116A
-4. เครื่องฟื้นฟูน้ำยาหล่อเย็น รุ่น NXC-ZSJ-100
+1. Double-Barrel Oil Purifier (LYJ-001-D)
+2. Single-Barrel Oil Purifier (LYJ-001-S)
+3. Slag & Metal Chip Removal Machine (NXC-QZJ-116A)
+4. Coolant Purification & Deodorizer (NXC-ZSJ-100)
 
-บริการพิเศษ: ยินดีนำเครื่องจักรเข้าไปสาธิตการทำงานให้ทดลองใช้งานฟรี (Demo On-site) ถึงหน้างานจริง
+Special Offer: Complimentary On-site Demo available directly at your factory facility.
 
-ขอแสดงความนับถือ,
-เอกชัย หาบ้านแท่น (แม็ก) 092-479-7666
+Best regards,
+Akachai Habantan (Max) | +66 92 479 7666
 CHICAI ELECTRIC (THAILAND) CO., LTD.`
       };
     }
@@ -158,7 +158,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
 
   useEffect(() => {
     if (isOpen && customer) {
-      const customerName = customer.name || "ลูกค้า";
+      const customerName = customer.name || "Customer";
       setToEmail(customer.email || "");
       const tpl = getTemplateData(templateType, customerName);
       setSubject(tpl.subject);
@@ -181,14 +181,14 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
   // 1-Click Direct Send via Google Apps Script
   const handleDirectSendEmail = async () => {
     if (!cleanToEmail) {
-      alert("กรุณาระบุอีเมลผู้รับก่อนส่ง");
+      alert("Please specify a recipient email before sending.");
       return;
     }
 
     // If previously sent or contacted, ask for confirmation to prevent accidental double send
     if (previousEmailLog) {
       const confirmSendAgain = window.confirm(
-        `⚠️ แจ้งเตือน: บริษัทนี้เคยมีการติดต่อ/ส่งข้อมูลไปแล้ว (${previousEmailLog.activity_type}: ${previousEmailLog.details || "ส่งอีเมล"})\n\nคุณต้องการยืนยันส่งอีเมลซ้ำอีกครั้งใช่หรือไม่?`
+        `⚠️ Warning: This factory was previously contacted (${previousEmailLog.activity_type}: ${previousEmailLog.details || "Email Sent"})\n\nDo you want to proceed and send again?`
       );
       if (!confirmSendAgain) return;
     }
@@ -259,7 +259,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
       }
     } catch (err: any) {
       console.error("Error sending direct email:", err);
-      setDirectSendError(err.message || "เกิดข้อผิดพลาดในการเชื่อมต่อ Google Apps Script");
+      setDirectSendError(err.message || "Failed to connect to Google Apps Script Webhook");
     } finally {
       setIsSendingDirect(false);
     }
@@ -267,7 +267,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
 
   const handleOpenGmailWeb = async () => {
     if (!cleanToEmail) {
-      alert("กรุณาระบุอีเมลผู้รับก่อน");
+      alert("Please specify a recipient email first.");
       return;
     }
 
@@ -312,7 +312,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
               <div className="min-w-0">
                 <div className="flex items-center space-x-1.5 flex-wrap">
                   <h3 className="font-black text-sm sm:text-base tracking-tight text-white whitespace-nowrap">
-                    ส่งอีเมลนำเสนอสินค้า
+                    Send Product Presentation
                   </h3>
                   <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-400/25 text-emerald-100 border border-emerald-300/30">
                     1-Click
@@ -330,7 +330,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                 type="button"
                 onClick={() => setShowWebhookSettings(!showWebhookSettings)}
                 className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white rounded-full hover:bg-white/15 active:scale-95 transition-all"
-                title="ตั้งค่า Webhook URL"
+                title="Configure Webhook URL"
               >
                 <Settings className="w-3.5 h-3.5" />
               </button>
@@ -350,14 +350,14 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             <div className="flex items-center justify-between">
               <span className="font-bold flex items-center space-x-1 text-emerald-400 text-[11px]">
                 <Settings className="w-3 h-3" />
-                <span>ตั้งค่า Google Apps Script Webhook URL</span>
+                <span>Configure Google Apps Script Webhook URL</span>
               </span>
               <button
                 type="button"
                 onClick={() => setShowWebhookSettings(false)}
                 className="text-slate-400 hover:text-white text-[10px]"
               >
-                ปิด
+                Close
               </button>
             </div>
             <div className="flex space-x-1.5">
@@ -373,7 +373,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                 onClick={handleSaveWebhookUrl}
                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shrink-0"
               >
-                บันทึก
+                Save
               </button>
             </div>
           </div>
@@ -388,10 +388,10 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-950 leading-relaxed min-w-0 flex-1">
                 <span className="font-extrabold text-xs sm:text-sm text-amber-900 block">
-                  ⚠️ บริษัทนี้เคยส่งข้อมูล/ติดต่อแล้ว
+                  ⚠️ Factory Previously Contacted
                 </span>
                 <span className="text-[11px] text-amber-900 block mt-0.5">
-                  กิจกรรม: <b>{previousEmailLog.activity_type}</b> ({new Date(previousEmailLog.activity_date).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })})
+                  Activity: <b>{previousEmailLog.activity_type}</b> ({new Date(previousEmailLog.activity_date).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })})
                 </span>
                 {previousEmailLog.details && (
                   <span className="text-[10.5px] text-amber-800/90 block mt-0.5 truncate">
@@ -410,9 +410,9 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
               </div>
               <div className="text-xs text-emerald-950 leading-relaxed">
                 <span className="font-black text-xs sm:text-sm block text-emerald-900">
-                  🎉 ส่งอีเมล E-Catalog สำเร็จเรียบร้อยแล้ว!
+                  🎉 E-Catalog Email Dispatched Successfully!
                 </span>
-                อีเมลพร้อมรูปภาพประกอบครบชุดได้ถูกส่งออกจาก Gmail (<code>akachai.chicai@gmail.com</code>) แล้ว และระบบได้บันทึกประวัติการติดต่อลงใน Timeline ของโรงงานนี้ให้อัตโนมัติครับ
+                Email and product presentation have been dispatched via Gmail (<code>akachai.chicai@gmail.com</code>) and logged to the customer timeline automatically.
               </div>
             </div>
           )}
@@ -425,7 +425,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                   <AlertCircle className="w-4 h-4" />
                 </div>
                 <div className="text-xs text-rose-950 leading-relaxed flex-1">
-                  <span className="font-black text-xs sm:text-sm block text-rose-900">เกิดข้อผิดพลาดในการส่งอัตโนมัติ:</span>
+                  <span className="font-black text-xs sm:text-sm block text-rose-900">Error Sending Email:</span>
                   <span className="text-[11px] text-rose-700">{directSendError}</span>
                 </div>
               </div>
@@ -439,7 +439,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                   className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs flex items-center justify-center space-x-1.5 transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>เปิดส่งผ่าน Gmail Web ทันที (ข้อความครบ)</span>
+                  <span>Open via Gmail Web (Full Message)</span>
                 </button>
               </div>
             </div>
@@ -448,7 +448,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
           {/* Template Selection Tabs */}
           <div className="space-y-1.5">
             <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-              รูปแบบข้อความ (Template)
+              Message Template
             </label>
             <div className="grid grid-cols-3 gap-1.5">
               <button
@@ -460,8 +460,8 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>🛡️ ทางการ</span>
-                <span className="text-[9px] opacity-75 font-medium">ไร้ลิงก์/กัน Spam</span>
+                <span>🛡️ Formal</span>
+                <span className="text-[9px] opacity-75 font-medium">Anti-Spam / Safe</span>
               </button>
               <button
                 type="button"
@@ -472,8 +472,8 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>💬 สั้น กระชับ</span>
-                <span className="text-[9px] opacity-75 font-medium">เปิดบทสนทนา</span>
+                <span>💬 Concise</span>
+                <span className="text-[9px] opacity-75 font-medium">Direct Inquiry</span>
               </button>
               <button
                 type="button"
@@ -484,23 +484,23 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>⚡ สินค้าหลัก</span>
-                <span className="text-[9px] opacity-75 font-medium">รุ่นเครื่องจักร</span>
+                <span>⚡ Key Models</span>
+                <span className="text-[9px] opacity-75 font-medium">Core Machines</span>
               </button>
             </div>
             {templateType === "formal" && (
               <p className="text-[10px] text-teal-700 font-medium">
-                ✅ เหมาะสำหรับส่งหาอีเมลกลาง (@gmail.com) แบบเป็นทางการ ปลอดภัยจากตัวกรองความปลอดภัย
+                ✅ Formal introduction suitable for general corporate inboxes without triggering spam filters.
               </p>
             )}
             {templateType === "concise" && (
               <p className="text-[10px] text-teal-700 font-medium">
-                ✅ ข้อความสั้น ขออนุญาตส่งไฟล์ PDF เพิ่มเติม อัตราการเปิดอ่านและตอบกลับสูง
+                ✅ Short inquiry asking permission to send PDF catalog. High open and response rate.
               </p>
             )}
             {templateType === "standard" && (
               <p className="text-[10px] text-slate-600 font-medium">
-                💡 สรุปรุ่นเครื่องจักรหลัก 4 รายการครบถ้วน
+                💡 Clear summary of 4 flagship industrial machinery solutions.
               </p>
             )}
           </div>
@@ -510,11 +510,11 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center space-x-1">
                 <Mail className="w-3 h-3 text-teal-700" />
-                <span>ถึง (To Email)</span>
+                <span>To (Email Address)</span>
               </label>
               {!toEmail && (
                 <span className="text-[9.5px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded-md border border-amber-200">
-                  ⚠️ ยังไม่มีอีเมล (กรอกเพิ่มได้)
+                  ⚠️ No email specified (Editable)
                 </span>
               )}
             </div>
@@ -522,7 +522,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
               type="email"
               value={toEmail}
               onChange={(e) => setToEmail(e.target.value)}
-              placeholder="กรอกอีเมล เช่น purchasing@company.com"
+              placeholder="e.g. purchasing@company.com"
               className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-xs sm:text-sm font-medium transition-all"
             />
           </div>
@@ -530,7 +530,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
           {/* Email Subject */}
           <div>
             <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">
-              หัวข้ออีเมล (Subject)
+              Subject
             </label>
             <input
               type="text"
@@ -543,7 +543,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
           {/* Email Body Preview */}
           <div>
             <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">
-              เนื้อหาที่จะส่ง (Message Preview)
+              Message Preview
             </label>
             <textarea
               rows={5}
@@ -561,7 +561,7 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             onClick={onClose}
             className="h-11 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press"
           >
-            ปิด
+            Close
           </button>
 
           {/* Open in Gmail Web / App Button */}
@@ -569,10 +569,10 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
             type="button"
             onClick={handleOpenGmailWeb}
             className="h-11 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs sm:text-sm font-bold transition-all active:scale-95 touch-press flex items-center justify-center space-x-1.5"
-            title="เปิดเขียนใน Gmail Web/App พร้อมหัวข้อและเนื้อหาครบชุด เพื่อส่งตรงแบบ 100% ปลอดภัย"
+            title="Open compose window in Gmail Web"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">ส่งผ่าน</span>
+            <span className="hidden sm:inline">Send via</span>
             <span>Gmail Web</span>
           </button>
 
@@ -586,22 +586,22 @@ CHICAI ELECTRIC (THAILAND) CO., LTD.`
                 ? "bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-800 shadow-amber-700/20"
                 : "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 shadow-teal-700/20"
             }`}
-            title="ยิงอีเมล E-Catalog พร้อมรูปภาพอัตโนมัติ 1-Click ผ่าน Google Apps Script"
+            title="Send E-Catalog and presentation email via Google Apps Script"
           >
             {isSendingDirect ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>กำลังส่ง...</span>
+                <span>Sending...</span>
               </>
             ) : previousEmailLog ? (
               <>
                 <RotateCcw className="w-4 h-4" />
-                <span>⚠️ ส่งซ้ำ (1-Click)</span>
+                <span>⚠️ Resend (1-Click)</span>
               </>
             ) : (
               <>
                 <Rocket className="w-4 h-4" />
-                <span>🚀 ส่งทันที (1-Click)</span>
+                <span>🚀 Send Now (1-Click)</span>
               </>
             )}
           </button>

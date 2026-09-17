@@ -17,7 +17,7 @@ export default function DeleteConfirmModal({
   isOpen,
   title,
   message,
-  confirmLabel = 'ยืนยันการลบ',
+  confirmLabel = 'Confirm Delete',
   isDeleting = false,
   onConfirm,
   onClose,
@@ -58,7 +58,7 @@ export default function DeleteConfirmModal({
             disabled={isDeleting}
             className="h-11 px-4 sm:px-5 text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all active:scale-95"
           >
-            ยกเลิก
+            Cancel
           </button>
           <button
             type="button"
@@ -69,7 +69,7 @@ export default function DeleteConfirmModal({
             {isDeleting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>กำลังลบ...</span>
+                <span>Deleting...</span>
               </>
             ) : (
               <>

@@ -32,14 +32,16 @@ export function calculateDistanceKm(
   return Math.round(d * 10) / 10; // 1 decimal place
 }
 
-// Format distance nicely in Thai
-export function formatDistanceThai(km: number | null): string {
+// Format distance nicely in English
+export function formatDistanceEng(km: number | null): string {
   if (km === null || isNaN(km)) return '';
   if (km < 1) {
-    return `${Math.round(km * 1000)} ม.`;
+    return `${Math.round(km * 1000)} m`;
   }
-  return `${km.toFixed(1)} กม.`;
+  return `${km.toFixed(1)} km`;
 }
+
+export const formatDistanceThai = formatDistanceEng;
 
 // Estimate driving time in minutes based on average speed (e.g. 45 km/h in industrial/urban zone)
 export function estimateDrivingTimeMinutes(km: number | null): number | null {
@@ -49,13 +51,15 @@ export function estimateDrivingTimeMinutes(km: number | null): number | null {
   return Math.max(5, Math.round(hours * 60)); // minimum 5 mins
 }
 
-export function formatDrivingTimeThai(minutes: number | null): string {
+export function formatDrivingTimeEng(minutes: number | null): string {
   if (!minutes) return '';
-  if (minutes < 60) return `~${minutes} นาที`;
+  if (minutes < 60) return `~${minutes} min`;
   const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return mins > 0 ? `~${hrs} ชม. ${mins} นาที` : `~${hrs} ชม.`;
+  return mins > 0 ? `~${hrs} hr ${mins} min` : `~${hrs} hr`;
 }
+
+export const formatDrivingTimeThai = formatDrivingTimeEng;
 
 // Calculate total route distance for a sequence of planned stops
 export function calculateRouteStats(stops: { latitude?: number | null; longitude?: number | null }[]): {

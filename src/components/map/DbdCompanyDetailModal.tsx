@@ -62,24 +62,24 @@ export default function DbdCompanyDetailModal({
     setIsImporting(true);
     try {
       const noteParts = [
-        isGoogleBusiness ? '📍 หมุดสถานที่จริง (Google Business Profile)' : '📍 พิกัดที่อยู่ DBD (ยังไม่ได้ลงทะเบียน Google)',
-        company.registered_capital ? `💰 ทุนจดทะเบียน: ${company.registered_capital.toLocaleString()} บาท` : null,
+        isGoogleBusiness ? '📍 Verified Location (Google Business Profile)' : '📍 DBD Registered Address',
+        company.registered_capital ? `💰 Capital: ${company.registered_capital.toLocaleString()} THB` : null,
         company.tsic_code ? `TSIC: ${company.tsic_code}` : null,
       ].filter(Boolean);
 
       const newCustomerPayload: any = {
         name: company.name,
         address: company.address
-          ? `${company.address} ต.${company.subdistrict || ''} อ.${company.district || ''} จ.${company.province || ''} ${company.zipcode || ''}`.trim()
+          ? `${company.address} ${company.subdistrict || ''} ${company.district || ''} ${company.province || ''} ${company.zipcode || ''}`.trim()
           : null,
         district: company.district || null,
-        province: company.province || 'สมุทรปราการ',
+        province: company.province || 'Samut Prakan',
         phone: company.phone || null,
         website: company.website || null,
         google_maps_url: company.google_maps_url || null,
         latitude: company.latitude || null,
         longitude: company.longitude || null,
-        business_type: company.objective || company.industry_group || 'โรงงานอุตสาหกรรม',
+        business_type: company.objective || company.industry_group || 'Manufacturing Factory',
         pipeline_stage: 'ยังไม่ได้ติดต่อ',
         tax_id: company.tax_id || null,
         dbd_company_id: company.id,
@@ -102,7 +102,7 @@ export default function DbdCompanyDetailModal({
       }
     } catch (err: any) {
       console.error('Failed to import customer from DBD modal:', err);
-      alert('เกิดข้อผิดพลาดในการนำเข้า: ' + (err.message || ''));
+      alert('Import error: ' + (err.message || ''));
     } finally {
       setIsImporting(false);
     }
@@ -120,25 +120,25 @@ export default function DbdCompanyDetailModal({
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300/80 flex items-center gap-1">
                 <Building2 className="w-3.5 h-3.5 text-amber-700" />
-                <span>คลังโรงงาน DBD</span>
+                <span>DBD Directory</span>
               </span>
 
               {isGoogleBusiness ? (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
                   <span>🟢</span>
-                  <span>ธุรกิจลงทะเบียน Google</span>
+                  <span>Google Business Profile</span>
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1">
                   <span>📍</span>
-                  <span>พิกัดที่อยู่ DBD</span>
+                  <span>DBD Address</span>
                 </span>
               )}
 
               {(isInCrm || importSuccess) && (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                  <span>อยู่ใน Sales CRM</span>
+                  <span>In Sales CRM</span>
                 </span>
               )}
             </div>
@@ -162,13 +162,13 @@ export default function DbdCompanyDetailModal({
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-3">
             <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-blue-600" />
-              <span>ข้อมูลการจดทะเบียนนิติบุคคล</span>
+              <span>Legal Entity Registration Details</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {/* Tax ID */}
               <div className="bg-white p-3 rounded-xl border border-slate-200/60">
-                <div className="text-[11px] font-semibold text-slate-400">เลขนิติบุคคล / Tax ID</div>
+                <div className="text-[11px] font-semibold text-slate-400">Tax ID / Registration No.</div>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">
                     {company.tax_id || '-'}
@@ -178,7 +178,7 @@ export default function DbdCompanyDetailModal({
                       <button
                         onClick={() => handleCopyTaxId(company.tax_id!)}
                         className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors"
-                        title="คัดลอกเลขทะเบียน"
+                        title="Copy Tax ID"
                       >
                         {copiedTaxId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -187,7 +187,7 @@ export default function DbdCompanyDetailModal({
                         target="_blank"
                         rel="noreferrer"
                         className="p-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="เปิดดูบน DBD DataWarehouse"
+                        title="Open in DBD DataWarehouse"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
@@ -198,40 +198,40 @@ export default function DbdCompanyDetailModal({
 
               {/* Registered Capital */}
               <div className="bg-white p-3 rounded-xl border border-slate-200/60">
-                <div className="text-[11px] font-semibold text-slate-400">ทุนจดทะเบียน</div>
+                <div className="text-[11px] font-semibold text-slate-400">Registered Capital</div>
                 <div className="mt-1 flex items-baseline">
                   <span className="font-black text-amber-700 text-base sm:text-lg">
                     {company.registered_capital ? company.registered_capital.toLocaleString() : '-'}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500 ml-1">บาท</span>
+                  <span className="text-xs font-semibold text-slate-500 ml-1">THB</span>
                 </div>
               </div>
 
               {/* TSIC Code */}
               <div className="bg-white p-3 rounded-xl border border-slate-200/60">
-                <div className="text-[11px] font-semibold text-slate-400">รหัส TSIC (หมวดหมู่ธุรกิจ)</div>
+                <div className="text-[11px] font-semibold text-slate-400">TSIC Code (Industry Category)</div>
                 <div className="mt-1 font-bold text-indigo-700 text-xs sm:text-sm">
                   {company.tsic_code ? `TSIC ${company.tsic_code}` : '-'}
                   <span className="text-slate-600 font-normal ml-1.5">
-                    ({company.industry_group || 'การผลิต'})
+                    ({company.industry_group || 'Manufacturing'})
                   </span>
                 </div>
               </div>
 
               {/* Registered Date */}
               <div className="bg-white p-3 rounded-xl border border-slate-200/60">
-                <div className="text-[11px] font-semibold text-slate-400">วันที่จดทะเบียนจัดตั้ง</div>
+                <div className="text-[11px] font-semibold text-slate-400">Registration Date</div>
                 <div className="mt-1 font-bold text-slate-800 text-xs sm:text-sm">
-                  {company.registered_date || (company.batch_year ? `ปี พ.ศ. ${company.batch_year}` : '-')}
+                  {company.registered_date || (company.batch_year ? `Year ${company.batch_year}` : '-')}
                 </div>
               </div>
             </div>
 
             {/* Objective */}
             <div className="bg-white p-3.5 rounded-xl border border-slate-200/60">
-              <div className="text-[11px] font-semibold text-slate-400 mb-1">วัตถุประสงค์ / สินค้าที่ผลิต</div>
+              <div className="text-[11px] font-semibold text-slate-400 mb-1">Business Objective / Manufactured Products</div>
               <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                {company.objective || company.industry_group || 'ไม่ระบุรายละเอียดวัตถุประสงค์'}
+                {company.objective || company.industry_group || 'No objective details specified'}
               </p>
             </div>
           </div>
@@ -240,12 +240,12 @@ export default function DbdCompanyDetailModal({
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-3">
             <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-emerald-600" />
-              <span>ที่ตั้งโรงงาน & ข้อมูลพิกัดแผนที่</span>
+              <span>Location & GPS Map Information</span>
             </h3>
 
             <div className="bg-white p-3.5 rounded-xl border border-slate-200/60 space-y-2">
               <div className="text-xs text-slate-700 leading-relaxed">
-                <strong>ที่อยู่จดทะเบียน:</strong> {company.address || '-'} ต.{company.subdistrict || '-'} อ.{company.district || '-'} จ.{company.province || 'สมุทรปราการ'} {company.zipcode || ''}
+                <strong>Registered Address:</strong> {company.address || '-'} {company.subdistrict || ''} {company.district || ''} {company.province || 'Samut Prakan'} {company.zipcode || ''}
               </div>
 
               {company.latitude && company.longitude ? (
@@ -260,7 +260,7 @@ export default function DbdCompanyDetailModal({
                     className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-xs"
                   >
                     <Navigation className="w-3.5 h-3.5" />
-                    <span>เปิดนำทางใน Google Maps</span>
+                    <span>Open in Google Maps</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -303,7 +303,7 @@ export default function DbdCompanyDetailModal({
             rel="noreferrer"
             className="inline-flex items-center space-x-1.5 text-xs text-slate-600 hover:text-blue-700 font-bold"
           >
-            <span>🏛️ ตรวจสอบงบการเงินบน DBD DataWarehouse+</span>
+            <span>🏛️ View Financial Statements on DBD DataWarehouse+</span>
             <ExternalLink className="w-3 h-3" />
           </a>
 
@@ -318,12 +318,12 @@ export default function DbdCompanyDetailModal({
                     }}
                     className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs sm:text-sm hover:bg-blue-100 transition-colors"
                   >
-                    <span>ดูหมุดใน CRM</span>
+                    <span>View in CRM</span>
                   </button>
                 )}
                 <div className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs sm:text-sm">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>อยู่ใน Sales CRM แล้ว</span>
+                  <span>In Sales CRM</span>
                 </div>
               </div>
             ) : (
@@ -335,12 +335,12 @@ export default function DbdCompanyDetailModal({
                 {isImporting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>กำลังเพิ่มเข้า CRM...</span>
+                    <span>Adding to CRM...</span>
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
-                    <span>+ เพิ่มเข้า Sales CRM (1-Click)</span>
+                    <span>+ Add to Sales CRM (1-Click)</span>
                   </>
                 )}
               </button>

@@ -3,25 +3,29 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, LayoutDashboard, Users, Star } from 'lucide-react';
-import { getMyPortfolioIds, subscribeToPortfolioChanges } from '@/lib/portfolio';
+import { MapPin, Users, Calendar } from 'lucide-react';
+import { getLocalMyCustomers, subscribeToPortfolioChanges, syncMyCustomersFromSupabase } from '@/lib/portfolio';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [portfolioCount, setPortfolioCount] = useState<number>(0);
 
   useEffect(() => {
-    setPortfolioCount(getMyPortfolioIds().length);
-    const unsubscribe = subscribeToPortfolioChanges((ids) => {
-      setPortfolioCount(ids.length);
+    setPortfolioCount(getLocalMyCustomers().length);
+    syncMyCustomersFromSupabase().then((list) => {
+      setPortfolioCount(list.length);
+    });
+
+    const unsubscribe = subscribeToPortfolioChanges((list) => {
+      setPortfolioCount(list.length);
     });
     return () => unsubscribe();
   }, []);
 
   const navItems = [
-    { name: 'หน้าหลัก', href: '/', icon: LayoutDashboard, label: 'หน้าหลัก' },
-    { name: 'แผนที่', href: '/map', icon: MapPin, label: 'แผนที่' },
-    { name: 'ลูกค้าของฉัน', href: '/my-customers', icon: Users, label: 'ลูกค้าของฉัน', badge: portfolioCount },
+    { name: 'My Customers', href: '/my-customers', icon: Users, label: 'Customers', badge: portfolioCount },
+    { name: 'Factory Map', href: '/map', icon: MapPin, label: 'Map' },
+    { name: 'Sales Planner', href: '/planner', icon: Calendar, label: 'Planner' },
   ];
 
   const isMapPage = pathname === '/map';
@@ -32,7 +36,7 @@ export default function Navbar() {
       <header className="hidden sm:block sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center space-x-3 group">
+            <Link href="/my-customers" className="flex items-center space-x-3 group">
               <div className="h-9 px-2 py-1 rounded-xl bg-slate-900/5 flex items-center justify-center border border-slate-200/60 shadow-xs group-hover:scale-105 transition-transform">
                 <img src="/images/logo.png" alt="Chicai Logo" className="h-7 w-auto object-contain" />
               </div>
@@ -85,7 +89,7 @@ export default function Navbar() {
       {!isMapPage && (
         <div className="sm:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2.5 safe-top shadow-xs">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/my-customers" className="flex items-center space-x-2">
               <div className="h-8 px-1.5 py-0.5 rounded-lg bg-slate-900/5 flex items-center justify-center border border-slate-200/60 shadow-xs">
                 <img src="/images/logo.png" alt="Chicai Logo" className="h-6 w-auto object-contain" />
               </div>
@@ -97,14 +101,14 @@ export default function Navbar() {
                 className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-[#1b9b8e] text-white text-xs font-bold shadow-xs touch-press"
               >
                 <MapPin className="w-3.5 h-3.5" />
-                <span>เปิดแผนที่</span>
+                <span>Open Map</span>
               </Link>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. Mobile Bottom Navigation Tab Bar (iOS / Android Native Style) */}
+      {/* 3. Mobile Bottom Navigation Tab Bar (3 Tabs) */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 safe-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
         <nav className="grid grid-cols-3 h-14 items-center px-4">
           {navItems.map((item) => {
